@@ -1,0 +1,40 @@
+name: saludcuidado
+description: SaludCuidado - Aplicacion movil de gestion de citas medicas (Flutter).
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  # Color.withValues() requiere Flutter 3.27 o superior
+  sdk: ">=3.5.0 <4.0.0"
+  flutter: ">=3.27.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+  http: ^1.2.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+
+  # Tipografía empaquetada (Plus Jakarta Sans, licencia OFL — ver
+  # assets/fonts/OFL.txt). Va dentro de la app, así que no depende de
+  # internet ni de las fuentes instaladas en el celular.
+  fonts:
+    - family: PlusJakartaSans
+      fonts:
+        - asset: assets/fonts/PlusJakartaSans-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/PlusJakartaSans-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/PlusJakartaSans-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/PlusJakartaSans-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/PlusJakartaSans-ExtraBold.ttf
+          weight: 800

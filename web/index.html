@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <!--
+    base href lo reemplaza `flutter build web --base-href`. Es necesario
+    cambiarlo cuando la app NO se sirve en la raíz del dominio (por ejemplo
+    en GitHub Pages, donde vive en /nombre-del-repositorio/).
+  -->
+  <base href="$FLUTTER_BASE_HREF">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description"
+        content="SaludCuidado: reserva y gestiona tus citas médicas desde el celular.">
+  <meta name="theme-color" content="#1A5FBF">
+
+  <!-- Instalable como app en iOS y Android -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="SaludCuidado">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <link rel="icon" type="image/svg+xml" href="icons/marca.svg"/>
+  <link rel="alternate icon" type="image/png" href="favicon.png"/>
+
+  <title>SaludCuidado</title>
+  <link rel="manifest" href="manifest.json">
+
+  <style>
+    /* Pantalla de carga: el mismo degradado del splash de la app, para que
+       no se vea un rectángulo blanco mientras Flutter arranca. */
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: linear-gradient(135deg, #1A5FBF 0%, #14499A 100%);
+      overscroll-behavior: none;
+    }
+    #cargando {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      color: #ffffff;
+      transition: opacity .35s ease;
+    }
+    #cargando.oculto { opacity: 0; pointer-events: none; }
+    #cargando img { width: 84px; height: 84px; }
+    #cargando p { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: .2px; }
+    #cargando span { font-size: 12.5px; opacity: .75; }
+    .latido { animation: latido 1.6s ease-in-out infinite; }
+    @keyframes latido {
+      0%, 100% { transform: scale(1); }
+      14%      { transform: scale(1.09); }
+      28%      { transform: scale(1); }
+      42%      { transform: scale(1.045); }
+      56%      { transform: scale(1); }
+    }
+  </style>
+</head>
+<body>
+  <div id="cargando">
+    <img class="latido" src="icons/marca.svg" alt="SaludCuidado">
+    <p>SaludCuidado</p>
+    <span>Cargando tu salud…</span>
+  </div>
+
+  <script>
+    // Oculta la pantalla de carga cuando Flutter ya pintó el primer cuadro.
+    window.addEventListener('flutter-first-frame', function () {
+      var c = document.getElementById('cargando');
+      if (c) {
+        c.classList.add('oculto');
+        setTimeout(function () { c.remove(); }, 400);
+      }
+    });
+  </script>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>

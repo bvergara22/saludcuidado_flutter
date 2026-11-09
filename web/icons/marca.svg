@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img"
+     aria-label="SaludCuidado">
+  <title>SaludCuidado</title>
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1A5FBF"/>
+      <stop offset="1" stop-color="#14499A"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Cápsula de marca -->
+  <rect x="7" y="7" width="86" height="86" rx="26" fill="url(#g)"/>
+
+  <!-- Escudo (cuidado) -->
+  <path d="M50 24 C73 26 73 48 50 76 C27 48 27 26 50 24 Z"
+        fill="none" stroke="#ffffff" stroke-width="4"
+        stroke-linejoin="round"/>
+
+  <!-- Brazo vertical de la cruz médica (salud) -->
+  <rect x="46.4" y="35" width="7.2" height="30" rx="3.6" fill="#ffffff"/>
+
+  <!-- Electrocardiograma que atraviesa la cruz (vida) -->
+  <path d="M31 50 H40 L43.5 38.5 L47.5 61 L51 50 H69"
+        fill="none" stroke="#ffffff" stroke-width="6"
+        stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Punto del latido -->
+  <circle cx="47.5" cy="61" r="4.6" fill="#F5A623"/>
+</svg>
