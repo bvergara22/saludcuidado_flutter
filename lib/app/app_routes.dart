@@ -59,7 +59,14 @@ class AppRoutes {
         return _ruta(const RegistroScreen(), settings);
 
       case home:
-        return _ruta(const MainShell(indiceInicial: 0), settings);
+        // Argumento opcional: índice de pestaña inicial. LoginScreen lo usa
+        // para llevar al administrador directo al panel, igual que
+        // RoleBasedAuthenticationSuccessHandler redirige a /admin en la web.
+        final pestana = settings.arguments;
+        return _ruta(
+          MainShell(indiceInicial: pestana is int ? pestana : 0),
+          settings,
+        );
 
       case doctores:
         // Si se llega por push (no por la pestaña), se muestra con botón atrás.
