@@ -375,13 +375,17 @@ class PerfilScreen extends StatelessWidget {
   // -------------------------------------------------------------- widgets
 
   static Widget _grupoOpciones(List<_Opcion> opciones) {
+    // El fondo lo pinta un Material, no un Container decorado: así el
+    // destello de pulsación de cada ListTile se ve (sobre un DecoratedBox
+    // con color, Flutter avisa de que la tinta queda oculta).
     return Padding(
       padding: AppTheme.padPantalla,
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.surface,
+      child: Material(
+        color: AppColors.surface,
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppTheme.radio),
-          border: Border.all(color: AppColors.border),
+          side: const BorderSide(color: AppColors.border),
         ),
         child: Column(
           children: [
