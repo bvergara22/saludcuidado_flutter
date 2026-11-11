@@ -7,6 +7,7 @@ import '../data/api/api_cliente.dart';
 import '../data/app_state.dart';
 import '../widgets/app_text_field.dart';
 import '../widgets/marca.dart';
+import 'main_shell.dart';
 
 /// CONTRATO: LoginScreen (PDF 1.2)
 ///   Requiere : ningun parametro externo
@@ -113,9 +114,22 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     if (!mounted) return;
-    traza.navegacion(_origen, 'Login exitoso -> ${AppRoutes.home}',
-        contrato: 'LoginScreen.Garantiza');
-    Navigator.of(context).pushReplacementNamed(AppRoutes.home);
+
+    // El destino depende del rol, igual que en la plataforma web:
+    // RoleBasedAuthenticationSuccessHandler manda a /admin si el usuario
+    // tiene ROLE_ADMIN y a /inicio si no. Aquí es la pestaña del shell.
+    final esAdmin = estado.usuarioActual.esAdmin;
+    final pestana = esAdmin ? MainShell.indiceAdmin : 0;
+    traza.navegacion(
+      _origen,
+      'Login exitoso -> ${AppRoutes.home} '
+      '(${esAdmin ? "panel de administración" : "inicio"})',
+      contrato: esAdmin
+          ? 'RoleBasedAuthenticationSuccessHandler (ROLE_ADMIN -> /admin)'
+          : 'LoginScreen.Garantiza',
+    );
+    Navigator.of(context)
+        .pushReplacementNamed(AppRoutes.home, arguments: pestana);
   }
 
   /// Rellena el formulario con la cuenta sembrada en la base de datos.
