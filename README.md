@@ -44,7 +44,7 @@ cd SaludCuidado-flutter
 
 flutter pub get
 flutter run -d chrome     # web (no requiere Android SDK)
-flutter test              # 42 pruebas automatizadas
+flutter test              # 45 pruebas automatizadas
 flutter analyze           # debe reportar "No issues found!"
 ```
 
@@ -70,7 +70,7 @@ flutter create --platforms=ios,windows .
 | Dart | 3.13.7 |
 | SDK | `C:\src\flutter` |
 | `flutter analyze` | ✅ No issues found |
-| `flutter test` | ✅ 42/42 |
+| `flutter test` | ✅ 45/45 |
 | `flutter build web --release` | ✅ compila |
 
 **Una sola dependencia.** El proyecto usa el SDK de Flutter más `http` (para
@@ -160,6 +160,22 @@ Hay dos roles, los mismos que en la plataforma web: `ROLE_USER` y `ROLE_ADMIN`.
 Se guardan en la tabla `usuario_roles` (1 fila por rol), viajan en el JSON del
 login (`usuario.roles`) y la app los lee en `Usuario.esAdmin`.
 
+### La interfaz cambia con el rol
+
+Igual que en la web, donde `navbar.html` añade el enlace «Panel Admin» solo si
+`hasRole('ADMIN')` y `RoleBasedAuthenticationSuccessHandler` redirige al
+administrador a `/admin` nada más entrar:
+
+| | `ROLE_USER` | `ROLE_ADMIN` |
+|---|---|---|
+| Barra inferior | 4 pestañas | **5 pestañas**: se añade *Admin* |
+| Al iniciar sesión cae en | Inicio | **el panel de administración** |
+
+`MainShell` construye la barra a partir de `usuario.esAdmin`, y `LoginScreen`
+elige la pestaña de destino. El resto de la navegación se conserva: el
+administrador puede ir a Inicio, Doctores o Mis Citas cuando quiera, como en
+la web.
+
 **La autorización se decide en el servidor, no en la app.** La app solo decide
 qué enseñar:
 
@@ -167,8 +183,9 @@ qué enseñar:
 |------|----------|-------|
 | Backend | Rechaza toda petición a `/api/admin/**` sin sesión (**401**) o sin `ROLE_ADMIN` (**403**), antes de tocar la base de datos | `_exigirAdmin()` en `lib/rutas/admin.dart` |
 | Router | Resuelve `/admin`, pero **no** comprueba permisos | `AppRoutes.generar()` |
+| Shell | La pestaña *Admin* solo se dibuja si `usuario.esAdmin` | `main_shell.dart` |
 | Pantalla | Si el usuario no es admin, muestra «Acceso restringido» y registra la denegación en la traza | `AdminScreen._preparar()` |
-| Perfil | La entrada «Panel de administración» solo se dibuja si `usuario.esAdmin` | `perfil_screen.dart` |
+| Perfil | La entrada «Panel de administración» (atajo) solo se dibuja si `usuario.esAdmin` | `perfil_screen.dart` |
 
 Ocultar el botón es comodidad; quien llame a la API a mano recibe igualmente un
 403.
@@ -535,9 +552,10 @@ UI.
 
 ## 8. Estado conocido
 
-- Verificado: `flutter analyze` limpio, **42/42 pruebas** en verde
+- Verificado: `flutter analyze` limpio, **45/45 pruebas** en verde
   (21 de contrato + 15 de la capa de API y avatares + 6 de la API de
-  administración) y `flutter build web --release` compila.
+  administración + **3 de interfaz** sobre la barra inferior según el rol)
+  y `flutter build web --release` compila.
 - La API de administración se ejercitó con 22 comprobaciones sobre una base de
   datos de usar y tirar, más una prueba dedicada de autorización: con
   `ROLE_USER`, `/api/admin/resumen|citas|doctores|usuarios` devuelven **403**
