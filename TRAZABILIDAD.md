@@ -6,9 +6,10 @@ con la prueba que lo verifica.
 
 Leyenda: ✅ implementado y probado · ⚪ implementado sin prueba automática
 
-Cobertura: **42 pruebas** automatizadas — `test/contratos_test.dart` (21, contratos
-del PDF) y `test/api_test.dart` (21: capa de API, serialización, avatares y la
-API de administración).
+Cobertura: **45 pruebas** automatizadas — `test/contratos_test.dart` (21, contratos
+del PDF), `test/api_test.dart` (21: capa de API, serialización, avatares y la
+API de administración) y `test/shell_roles_test.dart` (3, pruebas de
+interfaz de la barra inferior según el rol).
 El sistema son dos proyectos: la app (`SaludCuidado-flutter`) y la API con base
 de datos SQLite (`SaludCuidado-backend`), cuyo mapeo con el dominio Java está en
 la §4.
@@ -107,6 +108,14 @@ la §4.
 | *Garantiza*: menú de opciones | `_grupoOpciones([...])` en 2 bloques (Cuenta / Aplicación), más un tercero (Administración) que solo se dibuja si `usuario.esAdmin` | ⚪ |
 | *Garantiza*: cerrar sesión → diálogo → `/login` | `_confirmarCierre()` → `AppState.cerrarSesion()` → `pushNamedAndRemoveUntil(login)` | ⚪ |
 | *Falla si*: estadísticas en 0 sin citas | Los contadores derivan de la lista, que puede estar vacía | ✅ `estadisticas en 0` |
+
+### MainShell según el rol (traza `navbar.html` y `RoleBasedAuthenticationSuccessHandler`)
+| Cláusula | Implementación | Prueba |
+|---|---|---|
+| *Garantiza*: el paciente ve 4 pestañas | `MainShell.build` omite la quinta si `!usuario.esAdmin` | ✅ `el paciente ve cuatro pestañas` |
+| *Garantiza*: el administrador ve una quinta pestaña *Admin* | Traza `navbar.html`: `th:if="hasRole('ADMIN')"` | ✅ `el administrador ve una quinta pestaña` |
+| *Garantiza*: el administrador entra directo al panel | `LoginScreen` navega con `arguments: MainShell.indiceAdmin`; traza `RoleBasedAuthenticationSuccessHandler` (`/admin` vs `/inicio`) | ✅ `entra directo al panel y puede salir` |
+| *Garantiza*: conserva el resto de la navegación | La barra sigue activa dentro del panel | ✅ (misma prueba) |
 
 ### AdminScreen (extensión — no está en el PDF; traza `admin.html` / `AdminController`)
 | Cláusula | Implementación | Prueba |
