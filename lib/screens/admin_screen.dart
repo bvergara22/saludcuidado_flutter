@@ -25,7 +25,11 @@ import 'admin_catalogo.dart';
 ///   Falla si : el usuario no es administrador -> pantalla de acceso
 ///              denegado (el backend además responde 403)
 class AdminScreen extends StatefulWidget {
-  const AdminScreen({super.key});
+  const AdminScreen({super.key, this.mostrarAtras = true});
+
+  /// `false` cuando el panel se muestra como pestaña dentro de `MainShell`:
+  /// ahí no hay nada a lo que volver, se sale cambiando de pestaña.
+  final bool mostrarAtras;
 
   static const String ruta = '/admin';
 
@@ -40,6 +44,11 @@ class _AdminScreenState extends State<AdminScreen>
   late final TabController _tabs = TabController(length: 5, vsync: this);
   AdminState? _admin;
 
+  /// El usuario sí es administrador, pero la app no tiene servidor detrás
+  /// (modo demostración): el panel administra datos reales, así que no se
+  /// puede abrir con datos de ejemplo.
+  bool _sinServidor = false;
+
   @override
   void initState() {
     super.initState();
@@ -51,13 +60,24 @@ class _AdminScreenState extends State<AdminScreen>
     final estado = AppStateScope.leer(context);
     final repo = estado.repositorio;
 
-    if (!estado.usuarioActual.esAdmin || repo == null) {
+    // Dos motivos distintos para no entrar, y conviene no confundirlos: uno
+    // es de permisos y el otro de conexión.
+    if (!estado.usuarioActual.esAdmin) {
       traza.error(
         _origen,
         'Acceso denegado: ${estado.usuarioActual.email} no es administrador',
         contrato: 'SecurityConfig: /admin/** hasAuthority(ROLE_ADMIN)',
       );
       setState(() {});
+      return;
+    }
+
+    if (repo == null) {
+      traza.error(
+        _origen,
+        'Panel no disponible: la app corre en modo demostración, sin servidor',
+      );
+      setState(() => _sinServidor = true);
       return;
     }
 
@@ -93,12 +113,35 @@ class _AdminScreenState extends State<AdminScreen>
   Widget build(BuildContext context) {
     final estado = AppStateScope.of(context);
 
-    if (!estado.usuarioActual.esAdmin) return const _AccesoDenegado();
+    if (!estado.usuarioActual.esAdmin) {
+      return _AvisoPanel(
+        icono: Icons.lock_outline_rounded,
+        color: AppColors.peligro,
+        titulo: 'Acceso restringido',
+        cuerpo: 'Esta sección es solo para cuentas con rol de administrador. '
+            'Inicia sesión con una cuenta autorizada.',
+        mostrarAtras: widget.mostrarAtras,
+      );
+    }
+
+    if (_sinServidor) {
+      return _AvisoPanel(
+        icono: Icons.cloud_off_rounded,
+        color: AppColors.aviso,
+        titulo: 'Panel no disponible',
+        cuerpo: 'La app está en modo demostración, sin servidor. El panel '
+            'administra datos reales, así que necesita la API en marcha.',
+        mostrarAtras: widget.mostrarAtras,
+      );
+    }
 
     final admin = _admin;
     if (admin == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Administración')),
+        appBar: AppBar(
+          automaticallyImplyLeading: widget.mostrarAtras,
+          title: const Text('Administración'),
+        ),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
@@ -107,6 +150,7 @@ class _AdminScreenState extends State<AdminScreen>
       animation: admin,
       builder: (context, _) => Scaffold(
         appBar: AppBar(
+          automaticallyImplyLeading: widget.mostrarAtras,
           title: const Text('Administración'),
           actions: [
             IconButton(
@@ -169,12 +213,28 @@ class _AdminScreenState extends State<AdminScreen>
 
 /// CONTRATO "Falla si": sin rol de administrador no se muestra el panel.
 /// Equivale al `redirect:/acceso-denegado` del controlador web.
-class _AccesoDenegado extends StatelessWidget {
-  const _AccesoDenegado();
+/// Pantalla de aviso del panel: o no tienes el rol, o no hay servidor.
+class _AvisoPanel extends StatelessWidget {
+  const _AvisoPanel({
+    required this.icono,
+    required this.color,
+    required this.titulo,
+    required this.cuerpo,
+    required this.mostrarAtras,
+  });
+
+  final IconData icono;
+  final Color color;
+  final String titulo;
+  final String cuerpo;
+  final bool mostrarAtras;
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('Administración')),
+        appBar: AppBar(
+          automaticallyImplyLeading: mostrarAtras,
+          title: const Text('Administración'),
+        ),
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(30),
@@ -186,33 +246,35 @@ class _AccesoDenegado extends StatelessWidget {
                   height: 72,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: AppColors.peligro.withValues(alpha: 0.10),
+                    color: color.withValues(alpha: 0.10),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.lock_outline_rounded,
-                      size: 34, color: AppColors.peligro),
+                  child: Icon(icono, size: 34, color: color),
                 ),
                 const SizedBox(height: 18),
-                const Text(
-                  'Acceso restringido',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                Text(
+                  titulo,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  'Esta sección es solo para cuentas con rol de '
-                  'administrador. Inicia sesión con una cuenta autorizada.',
+                Text(
+                  cuerpo,
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 13.5,
                     height: 1.45,
                     color: AppColors.textSecondary,
                   ),
                 ),
-                const SizedBox(height: 20),
-                OutlinedButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Volver'),
-                ),
+                if (mostrarAtras) ...[
+                  const SizedBox(height: 20),
+                  OutlinedButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Volver'),
+                  ),
+                ],
               ],
             ),
           ),
