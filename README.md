@@ -243,7 +243,7 @@ El proyecto implementa trazabilidad en **tres niveles**:
 ### a) Trazabilidad de requisitos → código
 Cada clase lleva en su docstring el contrato literal del PDF
 (`Requiere` / `Garantiza` / `Falla si`) y la clase Java de la que hereda su lógica.
-La matriz completa está en **[`TRAZABILIDAD.md`](TRAZABILIDAD.md)**.
+La matriz completa se entrega aparte, en el documento de trazabilidad.
 
 ### b) Trazabilidad en ejecución
 `TraceLogger` (`lib/core/trace/trace_logger.dart`) registra cada evento con

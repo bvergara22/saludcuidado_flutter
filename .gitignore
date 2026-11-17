@@ -7,3 +7,6 @@ pubspec.lock
 .vscode/
 .flutter-plugins
 .flutter-plugins-dependencies
+
+# Documento de trazabilidad: se entrega al profesor, no va en el repositorio.
+TRAZABILIDAD.md

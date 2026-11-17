@@ -19,7 +19,7 @@ import '../widgets/marca.dart';
 ///
 /// EXTENSION respecto al PDF: el destino ya no es siempre /login. Si la
 /// introduccion no se ha visto en esta sesion navega a /onboarding, que
-/// termina en /login. Ver TRAZABILIDAD.md, seccion "Extensiones".
+/// termina en /login. Ver el documento de trazabilidad, seccion "Extensiones".
 ///
 /// La animacion es una secuencia encadenada sobre una sola linea de tiempo:
 ///   0.00-0.42  el logo entra con rebote elastico
