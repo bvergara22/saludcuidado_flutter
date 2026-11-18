@@ -95,11 +95,22 @@ class AppState extends ChangeNotifier {
   String? get mensajeError => _mensajeError;
 
   /// Mensaje del banner que avisa de que se esta trabajando sin servidor.
+  ///
+  /// Distingue dos situaciones que no son lo mismo y que confundirlas
+  /// engaña a quien lo lee: mostrar las citas REALES del usuario guardadas
+  /// en el dispositivo, o mostrar las de ejemplo porque no hay nada
+  /// guardado. Decir «datos de demostración» en el primer caso haría
+  /// dudar de unos datos que sí son suyos.
   String? get avisoSinConexion {
     if (_soloLocal || _enLinea) return null;
     if (ApiConfig.sinServidor) {
       // Compilada sin API (p. ej. la versión publicada de muestra).
       return 'Versión de demostración: los cambios no se guardan.';
+    }
+    if (_desdeCache) {
+      final f = fechaCache;
+      return 'Sin conexión. Mostrando tus datos guardados'
+          '${f == null ? '' : ' el ${Fechas.corto(f)}'}.';
     }
     return 'Sin conexión con el servidor: datos de demostración.';
   }
