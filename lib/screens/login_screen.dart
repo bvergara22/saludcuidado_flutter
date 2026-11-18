@@ -148,6 +148,36 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   /// Aviso de error del servidor sobre el botón de ingreso.
+  /// Recuperación de contraseña.
+  ///
+  /// Esta versión no envía correos: montar un servidor de correo queda
+  /// fuera del alcance del proyecto, y fingir que se ha enviado uno sería
+  /// peor que decir la verdad. Se explica el camino real —escribir a
+  /// soporte— en lugar de dejar al usuario atascado.
+  void _recuperar(BuildContext context) {
+    traza.accion(_origen, 'Recuperar contraseña: se explica la vía de soporte');
+    showDialog<void>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: const Text('Recuperar tu contraseña'),
+        content: const Text(
+          'Esta versión no envía correos de recuperación automáticos.\n\n'
+          'Escribe a soporte@saludcuidado.com desde la dirección con la que '
+          'te registraste y te la restablecemos.\n\n'
+          'Si recuerdas tu contraseña y solo quieres cambiarla, puedes '
+          'hacerlo desde Perfil > Datos personales una vez dentro.',
+          style: TextStyle(height: 1.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(c).pop(),
+            child: const Text('Entendido'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _bannerError(String mensaje) => Container(
         margin: const EdgeInsets.only(top: 4, bottom: 6),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -235,16 +265,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
-                    onPressed: () {
-                      traza.accion(_origen, 'Recuperar contraseña (demo)');
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Función de recuperación no incluida en el prototipo',
-                          ),
-                        ),
-                      );
-                    },
+                    onPressed: () => _recuperar(context),
                     child: const Text('¿Olvidaste tu contraseña?'),
                   ),
                 ),

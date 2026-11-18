@@ -257,6 +257,29 @@ class Repositorio {
     return Cita.desdeJson(j['cita'] as Map<String, dynamic>);
   }
 
+  /// CONTRATO: actualizarCuenta
+  ///   Requiere : sesión iniciada; para cambiar la contraseña, la actual
+  ///   Garantiza: devuelve el usuario ya actualizado
+  ///   Falla si : la contraseña actual no coincide -> ApiExcepcion 401
+  ///              la nueva es demasiado corta -> ApiExcepcion 400
+  ///
+  /// Trazabilidad backend: `PATCH /api/auth/yo`.
+  Future<Usuario> actualizarCuenta({
+    String? nombre,
+    String? passwordActual,
+    String? passwordNueva,
+  }) async {
+    final j = await api.parchear('/api/auth/yo', {
+      if (nombre != null) 'nombre': nombre,
+      if (passwordNueva != null && passwordNueva.isNotEmpty) ...{
+        'passwordActual': passwordActual ?? '',
+        'passwordNueva': passwordNueva,
+      },
+    });
+    _enLinea = true;
+    return Usuario.desdeJson(j['usuario'] as Map<String, dynamic>);
+  }
+
   // ---------------------------------------------------------- asistente
 
   /// CONTRATO: chat

@@ -195,7 +195,10 @@ class PerfilScreen extends StatelessWidget {
             _Opcion(
               icono: Icons.person_outline_rounded,
               titulo: 'Datos personales',
-              onTap: () => _enDesarrollo(context, 'Datos personales'),
+              onTap: () {
+                traza.navegacion(_origen, 'Abrir ${AppRoutes.datosPersonales}');
+                Navigator.of(context).pushNamed(AppRoutes.datosPersonales);
+              },
             ),
             _Opcion(
               icono: Icons.event_note_outlined,
@@ -291,7 +294,10 @@ class PerfilScreen extends StatelessWidget {
             _Opcion(
               icono: Icons.help_outline_rounded,
               titulo: 'Ayuda y soporte',
-              onTap: () => _enDesarrollo(context, 'Ayuda y soporte'),
+              onTap: () {
+                traza.navegacion(_origen, 'Abrir ${AppRoutes.ayuda}');
+                Navigator.of(context).pushNamed(AppRoutes.ayuda);
+              },
             ),
             _Opcion(
               icono: Icons.info_outline_rounded,
@@ -329,13 +335,6 @@ class PerfilScreen extends StatelessWidget {
   }
 
   // ------------------------------------------------------------- acciones
-
-  static void _enDesarrollo(BuildContext context, String opcion) {
-    traza.accion(_origen, 'Opcion "$opcion" (no incluida en el prototipo)');
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$opcion no está incluido en el prototipo')),
-    );
-  }
 
   static void _acercaDe(BuildContext context) {
     showAboutDialog(

@@ -142,6 +142,47 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// CONTRATO: actualizarCuenta
+  ///   Requiere : sesión en línea; para cambiar la contraseña, la actual
+  ///   Garantiza: el usuario en memoria y el guardado en el dispositivo
+  ///              quedan con los datos nuevos
+  ///   Falla si : sin servidor -> SinConexion, y no se cambia nada
+  ///              (editar la cuenta solo en local dejaría el dispositivo
+  ///              diciendo una cosa y el servidor otra)
+  ///
+  /// Trazabilidad backend: `PATCH /api/auth/yo`.
+  Future<void> actualizarCuenta({
+    String? nombre,
+    String? passwordActual,
+    String? passwordNueva,
+  }) async {
+    final repo = _repo;
+    if (repo == null || !_enLinea) {
+      throw const SinConexion('Se necesita conexión para editar la cuenta.');
+    }
+
+    _usuario = await repo.actualizarCuenta(
+      nombre: nombre,
+      passwordActual: passwordActual,
+      passwordNueva: passwordNueva,
+    );
+
+    // El usuario guardado también cambia: si no, al reabrir la app sin red
+    // volvería a verse el nombre viejo.
+    final token = Preferencias.yo.token;
+    if (token != null) {
+      await Preferencias.yo.guardarSesion(token, _usuario!.aJson());
+    }
+
+    traza.accion(
+      _origen,
+      'Cuenta actualizada'
+      '${passwordNueva != null && passwordNueva.isNotEmpty ? " (contraseña incluida)" : ""}',
+      contrato: 'PATCH /api/auth/yo',
+    );
+    notifyListeners();
+  }
+
   /// CONTRATO: autenticar
   ///   Requiere : email y password no vacios
   ///   Garantiza: sesion iniciada contra el backend; si el servidor no

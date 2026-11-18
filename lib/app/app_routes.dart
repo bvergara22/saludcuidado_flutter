@@ -4,7 +4,9 @@ import '../core/trace/trace_logger.dart';
 import '../models/doctor.dart';
 import '../screens/admin_screen.dart';
 import '../screens/ajustes_screen.dart';
+import '../screens/ayuda_screen.dart';
 import '../screens/chat_screen.dart';
+import '../screens/datos_personales_screen.dart';
 import '../screens/doctor_screen.dart';
 import '../screens/servicios_screen.dart';
 import '../screens/doctores_screen.dart';
@@ -47,6 +49,8 @@ class AppRoutes {
   static const String asistente = ChatScreen.ruta;
   static const String ficha = DoctorScreen.ruta;
   static const String servicios = ServiciosScreen.ruta;
+  static const String datosPersonales = DatosPersonalesScreen.ruta;
+  static const String ayuda = AyudaScreen.ruta;
 
   /// Generador central de rutas. Centralizarlo permite registrar la traza
   /// y resolver los argumentos de forma tipada.
@@ -110,6 +114,12 @@ class AppRoutes {
           );
         }
         return _ruta(ReservarScreen(doctorInicial: doctor), settings);
+
+      case datosPersonales:
+        return _ruta(const DatosPersonalesScreen(), settings);
+
+      case ayuda:
+        return _ruta(const AyudaScreen(), settings);
 
       case servicios:
         // CONTRATO ServiciosScreen.Requiere: arguments: String? (id del
