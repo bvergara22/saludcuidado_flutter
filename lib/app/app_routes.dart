@@ -5,6 +5,8 @@ import '../models/doctor.dart';
 import '../screens/admin_screen.dart';
 import '../screens/ajustes_screen.dart';
 import '../screens/chat_screen.dart';
+import '../screens/doctor_screen.dart';
+import '../screens/servicios_screen.dart';
 import '../screens/doctores_screen.dart';
 import '../screens/login_screen.dart';
 import '../screens/main_shell.dart';
@@ -45,6 +47,8 @@ class AppRoutes {
   static const String admin = AdminScreen.ruta;
   static const String ajustes = AjustesScreen.ruta;
   static const String asistente = ChatScreen.ruta;
+  static const String ficha = DoctorScreen.ruta;
+  static const String servicios = ServiciosScreen.ruta;
 
   /// Generador central de rutas. Centralizarlo permite registrar la traza
   /// y resolver los argumentos de forma tipada.
@@ -111,6 +115,28 @@ class AppRoutes {
           );
         }
         return _ruta(ReservarScreen(doctorInicial: doctor), settings);
+
+      case servicios:
+        // CONTRATO ServiciosScreen.Requiere: arguments: String? (id del
+        // servicio que debe abrirse; opcional).
+        final destacado = settings.arguments;
+        return _ruta(
+          ServiciosScreen(destacado: destacado is String ? destacado : null),
+          settings,
+        );
+
+      case ficha:
+        // CONTRATO DoctorScreen.Requiere: arguments: Doctor (obligatorio).
+        final elegido = settings.arguments;
+        if (elegido is! Doctor) {
+          traza.error(
+            'Router',
+            'Argumento invalido para $ficha: '
+            '${elegido.runtimeType} (se esperaba Doctor)',
+          );
+          return _ruta(_RutaNoEncontrada(nombre: nombre), settings);
+        }
+        return _ruta(DoctorScreen(doctor: elegido), settings);
 
       default:
         traza.error('Router', 'Ruta desconocida: $nombre');

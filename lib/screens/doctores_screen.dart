@@ -50,13 +50,18 @@ class _DoctoresScreenState extends State<DoctoresScreen> {
 
   /// CONTRATO: al tocar un doctor navega a /reservar con el doctor
   /// como argumento.
-  void _abrirReserva(Doctor doctor) {
+  /// Tocar un médico abre su ficha, no la reserva.
+  ///
+  /// Antes se saltaba directo a reservar, lo que obligaba a decidir sin
+  /// haber visto su experiencia, dónde atiende ni qué días tiene cupo. El
+  /// botón de reservar sigue estando a un toque, ya dentro de la ficha.
+  void _abrirFicha(Doctor doctor) {
     traza.navegacion(
       _origen,
-      'Doctor ${doctor.nombre} -> ${AppRoutes.reservar} (argumento Doctor)',
+      'Doctor ${doctor.nombre} -> ${AppRoutes.ficha} (argumento Doctor)',
       contrato: 'DoctoresScreen.Garantiza',
     );
-    Navigator.of(context).pushNamed(AppRoutes.reservar, arguments: doctor);
+    Navigator.of(context).pushNamed(AppRoutes.ficha, arguments: doctor);
   }
 
   @override
@@ -103,7 +108,7 @@ class _DoctoresScreenState extends State<DoctoresScreen> {
                               const SizedBox(height: 10),
                           itemBuilder: (context, i) => DoctorCard(
                             doctor: doctores[i],
-                            onTap: () => _abrirReserva(doctores[i]),
+                            onTap: () => _abrirFicha(doctores[i]),
                           ),
                         ),
             ),

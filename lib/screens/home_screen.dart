@@ -73,9 +73,23 @@ class HomeScreen extends StatelessWidget {
             const SizedBox(height: 26),
 
             // -------------------------------------------- grid servicios
-            const Padding(
+            Padding(
               padding: AppTheme.padPantalla,
-              child: _TituloSeccion('Servicios'),
+              child: Row(
+                children: [
+                  const Expanded(child: _TituloSeccion('Servicios')),
+                  TextButton(
+                    onPressed: () => _verCatalogo(context),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: const Text('Ver todos',
+                        style: TextStyle(fontSize: 13)),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 10),
             Padding(
@@ -93,7 +107,7 @@ class HomeScreen extends StatelessWidget {
                 ),
                 itemBuilder: (context, i) => _TarjetaServicio(
                   servicio: servicios[i],
-                  onTap: () => _reservarServicio(context, servicios[i]),
+                  onTap: () => _abrirServicio(context, servicios[i]),
                 ),
               ),
             ),
@@ -131,7 +145,7 @@ class HomeScreen extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
                   child: DoctorCard(
                     doctor: d,
-                    onTap: () => _reservarConDoctor(context, d),
+                    onTap: () => _abrirFicha(context, d),
                   ),
                 ),
               ),
@@ -162,21 +176,34 @@ class HomeScreen extends StatelessWidget {
     }
   }
 
-  void _reservarConDoctor(BuildContext context, Doctor doctor) {
+  /// Igual que en la lista de médicos: primero la ficha, y desde ahí se
+  /// reserva. Así el destino de tocar un médico es el mismo en toda la app.
+  void _abrirFicha(BuildContext context, Doctor doctor) {
     traza.navegacion(
       _origen,
-      'Doctor ${doctor.nombre} -> ${AppRoutes.reservar} (preseleccionado)',
-      contrato: 'ReservarScreen.Requiere (arguments: Doctor?)',
+      'Doctor ${doctor.nombre} -> ${AppRoutes.ficha}',
+      contrato: 'DoctorScreen.Requiere (arguments: Doctor)',
     );
-    Navigator.of(context).pushNamed(AppRoutes.reservar, arguments: doctor);
+    Navigator.of(context).pushNamed(AppRoutes.ficha, arguments: doctor);
   }
 
-  void _reservarServicio(BuildContext context, Servicio servicio) {
+  /// Tocar un servicio abre el catálogo con ese servicio desplegado.
+  ///
+  /// Antes llevaba a la pantalla de reserva sin pasarle el servicio, así
+  /// que elegir "Pediatría" daba exactamente lo mismo que no elegir nada.
+  void _abrirServicio(BuildContext context, Servicio servicio) {
     traza.navegacion(
       _origen,
-      'Servicio ${servicio.nombre} -> ${AppRoutes.reservar}',
+      'Servicio ${servicio.nombre} -> ${AppRoutes.servicios} '
+      '(argumento ${servicio.id})',
     );
-    Navigator.of(context).pushNamed(AppRoutes.reservar);
+    Navigator.of(context)
+        .pushNamed(AppRoutes.servicios, arguments: servicio.id);
+  }
+
+  void _verCatalogo(BuildContext context) {
+    traza.navegacion(_origen, 'Ver todos -> ${AppRoutes.servicios}');
+    Navigator.of(context).pushNamed(AppRoutes.servicios);
   }
 }
 
