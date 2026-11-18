@@ -251,15 +251,6 @@ class PerfilScreen extends StatelessWidget {
           const SizedBox(height: 10),
           _grupoOpciones([
             _Opcion(
-              icono: Icons.timeline_rounded,
-              titulo: 'Trazabilidad del flujo',
-              subtitulo: 'Registro de navegación, acciones y validaciones',
-              onTap: () {
-                traza.navegacion(_origen, 'Abrir ${AppRoutes.trazabilidad}');
-                Navigator.of(context).pushNamed(AppRoutes.trazabilidad);
-              },
-            ),
-            _Opcion(
               icono: Icons.auto_awesome_rounded,
               titulo: 'Ver introducción de nuevo',
               subtitulo: 'Reproduce la bienvenida animada',

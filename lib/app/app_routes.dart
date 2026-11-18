@@ -16,7 +16,6 @@ import '../screens/perfil_screen.dart';
 import '../screens/registro_screen.dart';
 import '../screens/reservar_screen.dart';
 import '../screens/splash_screen.dart';
-import '../screens/trazabilidad_screen.dart';
 
 /// Mapa de rutas con nombre. Los nombres corresponden exactamente a los
 /// indicados en los contratos del documento de entregables.
@@ -43,7 +42,6 @@ class AppRoutes {
   static const String reservar = '/reservar';
   static const String perfil = '/perfil';
   static const String onboarding = '/onboarding';
-  static const String trazabilidad = '/trazabilidad';
   static const String admin = AdminScreen.ruta;
   static const String ajustes = AjustesScreen.ruta;
   static const String asistente = ChatScreen.ruta;
@@ -88,9 +86,6 @@ class AppRoutes {
 
       case onboarding:
         return _ruta(const OnboardingScreen(), settings);
-
-      case trazabilidad:
-        return _ruta(const TrazabilidadScreen(), settings);
 
       case asistente:
         return _ruta(const ChatScreen(), settings);
