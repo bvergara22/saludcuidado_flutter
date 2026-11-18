@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../app/app_routes.dart';
 import '../app/app_theme.dart';
 import '../core/trace/trace_logger.dart';
+import '../core/tour_app.dart';
 import '../data/app_state.dart';
 import '../widgets/avatar_ilustrado.dart';
 
@@ -15,7 +16,15 @@ import '../widgets/avatar_ilustrado.dart';
 class PerfilScreen extends StatelessWidget {
   final bool mostrarAtras;
 
-  const PerfilScreen({super.key, this.mostrarAtras = false});
+  /// Permite volver a la pestaña Inicio. Lo necesita el recorrido guiado,
+  /// que ilumina el botón del asistente y ese botón vive en Inicio.
+  final void Function(int)? onCambiarPestana;
+
+  const PerfilScreen({
+    super.key,
+    this.mostrarAtras = false,
+    this.onCambiarPestana,
+  });
 
   static const String _origen = 'PerfilScreen';
 
@@ -258,6 +267,25 @@ class PerfilScreen extends StatelessWidget {
                 AppStateScope.leer(context).reiniciarOnboarding();
                 traza.navegacion(_origen, 'Abrir ${AppRoutes.onboarding}');
                 Navigator.of(context).pushNamed(AppRoutes.onboarding);
+              },
+            ),
+            _Opcion(
+              icono: Icons.lightbulb_outline_rounded,
+              titulo: 'Repetir el recorrido guiado',
+              subtitulo: 'Vuelve a explicarte cómo usar la app',
+              onTap: () {
+                traza.accion(_origen, 'Repetir recorrido guiado');
+                final esAdmin =
+                    AppStateScope.leer(context).usuarioActual.esAdmin;
+                // Vuelve a Inicio antes de empezar: el recorrido ilumina
+                // el botón del asistente, y ese botón vive en esa pestaña.
+                // Sin esto se iluminaría un hueco vacío sobre Perfil.
+                onCambiarPestana?.call(0);
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (context.mounted) {
+                    TourApp.repetir(context, esAdmin: esAdmin);
+                  }
+                });
               },
             ),
             _Opcion(

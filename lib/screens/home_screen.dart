@@ -5,6 +5,7 @@ import '../app/app_theme.dart';
 import '../core/fechas.dart';
 import '../core/trace/trace_logger.dart';
 import '../data/app_state.dart';
+import '../widgets/tour_guiado.dart';
 import '../models/cita.dart';
 import '../models/doctor.dart';
 import '../models/servicio.dart';
@@ -263,6 +264,7 @@ class _Encabezado extends StatelessWidget {
           // Acceso al asistente: es la función más nueva y la que menos se
           // descubre sola, así que vive en el encabezado y no enterrada.
           Material(
+            key: AnclasTour.asistente,
             color: Colors.white.withValues(alpha: 0.18),
             shape: const CircleBorder(),
             child: InkWell(

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../core/trace/trace_logger.dart';
+import '../core/tour_app.dart';
 import '../data/app_state.dart';
+import '../widgets/tour_guiado.dart';
 import 'admin_screen.dart';
 import 'doctores_screen.dart';
 import 'home_screen.dart';
@@ -39,6 +41,26 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   static const String _origen = 'MainShell';
+
+  /// El recorrido guiado se lanza desde aquí, y no desde LoginScreen,
+  /// porque necesita que la barra de navegación esté ya en pantalla: sus
+  /// pasos iluminan las pestañas reales.
+  bool _tourPedido = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _quizasTour());
+  }
+
+  Future<void> _quizasTour() async {
+    if (_tourPedido || !mounted) return;
+    _tourPedido = true;
+    await TourApp.mostrarSiToca(
+      context,
+      esAdmin: AppStateScope.leer(context).usuarioActual.esAdmin,
+    );
+  }
   static const List<String> _nombresBase = [
     'Inicio',
     'Doctores',
@@ -71,7 +93,7 @@ class _MainShellState extends State<MainShell> {
           HomeScreen(onCambiarPestana: _cambiar),
           const DoctoresScreen(),
           const MisCitasScreen(),
-          const PerfilScreen(),
+          PerfilScreen(onCambiarPestana: _cambiar),
           // El panel vive dentro del shell, así que no lleva flecha de
           // retroceso: se sale de él cambiando de pestaña.
           if (esAdmin) const AdminScreen(mostrarAtras: false),
@@ -86,19 +108,28 @@ class _MainShellState extends State<MainShell> {
             activeIcon: Icon(Icons.home_rounded),
             label: 'Inicio',
           ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.people_outline_rounded),
-            activeIcon: Icon(Icons.people_rounded),
+          BottomNavigationBarItem(
+            icon: KeyedSubtree(
+              key: AnclasTour.doctores,
+              child: const Icon(Icons.people_outline_rounded),
+            ),
+            activeIcon: const Icon(Icons.people_rounded),
             label: 'Doctores',
           ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.calendar_today_outlined),
-            activeIcon: Icon(Icons.calendar_today_rounded),
+          BottomNavigationBarItem(
+            icon: KeyedSubtree(
+              key: AnclasTour.misCitas,
+              child: const Icon(Icons.calendar_today_outlined),
+            ),
+            activeIcon: const Icon(Icons.calendar_today_rounded),
             label: 'Mis Citas',
           ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline_rounded),
-            activeIcon: Icon(Icons.person_rounded),
+          BottomNavigationBarItem(
+            icon: KeyedSubtree(
+              key: AnclasTour.perfil,
+              child: const Icon(Icons.person_outline_rounded),
+            ),
+            activeIcon: const Icon(Icons.person_rounded),
             label: 'Perfil',
           ),
           if (esAdmin)

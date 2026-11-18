@@ -50,6 +50,7 @@ class Preferencias {
   static const String _kToken = 'sesion.token';
   static const String _kUsuario = 'sesion.usuario';
   static const String _kOnboarding = 'onboarding.visto';
+  static const String _kTour = 'onboarding.tour';
   static const String _kTema = 'ajustes.tema';
   static const String _kBiometria = 'seguridad.biometria';
   static const String _kNotificaciones = 'ajustes.notificaciones';
@@ -127,6 +128,17 @@ class Preferencias {
 
   Future<void> marcarOnboardingVisto(bool visto) async {
     await _prefs?.setBool(_kOnboarding, visto);
+  }
+
+  /// true cuando el usuario ya hizo el recorrido guiado de la app.
+  ///
+  /// Es distinto de [onboardingVisto]: aquel es la bienvenida anterior al
+  /// inicio de sesión, y este el recorrido que explica cómo usar la app
+  /// una vez dentro. Quien ya tenía cuenta no vio ninguno de los dos.
+  bool get tourVisto => _prefs?.getBool(_kTour) ?? false;
+
+  Future<void> marcarTourVisto(bool visto) async {
+    await _prefs?.setBool(_kTour, visto);
   }
 
   ModoTema get tema => ModoTema.desdeTexto(_prefs?.getString(_kTema));
