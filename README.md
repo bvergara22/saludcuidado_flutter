@@ -44,7 +44,7 @@ cd SaludCuidado-flutter
 
 flutter pub get
 flutter run -d chrome     # web (no requiere Android SDK)
-flutter test              # 45 pruebas automatizadas
+flutter test              # 67 pruebas automatizadas
 flutter analyze           # debe reportar "No issues found!"
 ```
 
@@ -70,7 +70,7 @@ flutter create --platforms=ios,windows .
 | Dart | 3.13.7 |
 | SDK | `C:\src\flutter` |
 | `flutter analyze` | ✅ No issues found |
-| `flutter test` | ✅ 45/45 |
+| `flutter test` | ✅ 67/67 |
 | `flutter build web --release` | ✅ compila |
 
 **Una sola dependencia.** El proyecto usa el SDK de Flutter más `http` (para
@@ -120,11 +120,11 @@ son `CustomPainter`).
                     │  [2] Mis Citas [3] Perfil               │
                     └───┬─────────────┬──────────┬────────────┘
                         │             │          │
-              doctor    │       FAB   │          │ "Trazabilidad"
-              tocado    │             │          │
+              doctor    │       FAB   │          │ ajustes, ayuda,
+              tocado    │             │          │ datos personales
                  ┌──────▼─────────────▼──┐  ┌────▼──────────────┐
-                 │      /reservar        │  │  /trazabilidad    │
-                 │  paso 1 → 2 → 3       │  │  visor de eventos │
+                 │   /doctor → /reservar │  │   /asistente      │
+                 │  paso 1 → 2 → 3       │  │   (botón flotante)│
                  └──────────┬────────────┘  └───────────────────┘
                             │ confirmar (diálogo de éxito)
                       ┌─────▼──────┐
@@ -143,10 +143,15 @@ son `CustomPainter`).
 | `/home`          | `MainShell(0)`             | login / registro         | pestañas, `/reservar`          |
 | `/doctores`      | `MainShell(1)`             | pestaña o push           | `/reservar` (con `Doctor`)     |
 | `/mis-citas`     | `MainShell(2)`             | pestaña o push           | `/reservar` (FAB)              |
-| `/perfil`        | `MainShell(3)`             | pestaña o push           | `/login`, `/trazabilidad`      |
-| `/reservar`      | `ReservarScreen`           | home / doctores / citas  | `/mis-citas`                   |
-| `/trazabilidad`  | `TrazabilidadScreen`       | `/perfil`                | —                              |
-| `/admin`         | `AdminScreen`              | `/perfil` (solo admin)   | —                              |
+| `/perfil`        | `MainShell(3)`             | pestaña o push           | `/login`, ajustes, ayuda       |
+| `/reservar`      | `ReservarScreen`           | ficha del médico / citas | `/mis-citas`                   |
+| `/doctor`        | `DoctorScreen`             | doctores, inicio, chat   | `/reservar` (con `Doctor`)     |
+| `/servicios`     | `ServiciosScreen`          | inicio («Ver todos»)     | `/doctor`                      |
+| `/asistente`     | `ChatScreen`               | botón flotante, ayuda    | `/doctor`                      |
+| `/ajustes`       | `AjustesScreen`            | `/perfil`                | —                              |
+| `/datos-personales` | `DatosPersonalesScreen` | `/perfil`                | vuelve a `/perfil`             |
+| `/ayuda`         | `AyudaScreen`              | `/perfil`                | `/asistente`                   |
+| `/admin`         | `AdminScreen`              | pestaña (solo admin)     | —                              |
 
 Las rutas se resuelven en un único punto: `AppRoutes.generar()` (`lib/app/app_routes.dart`),
 que además registra cada resolución en la traza y valida de forma tipada el
@@ -390,7 +395,13 @@ lib/
     ├── mis_citas_screen.dart  reservar_screen.dart  perfil_screen.dart
     ├── admin_screen.dart         panel de admin: tablero y citas
     ├── admin_catalogo.dart       panel de admin: doctores, servicios, usuarios
-    └── trazabilidad_screen.dart
+    ├── doctor_screen.dart        ficha del médico con próximos días con cupo
+    ├── servicios_screen.dart     catálogo de servicios
+    ├── chat_screen.dart          el asistente (Lía)
+    ├── ajustes_screen.dart       recordatorios, huella y datos sin conexión
+    ├── datos_personales_screen.dart   nombre y contraseña
+    ├── ayuda_screen.dart         preguntas frecuentes
+    └── reprogramar_hoja.dart     mover una cita a otro día u hora
 ```
 
 ---
@@ -536,7 +547,8 @@ al estilo de las apps de reparto, también en `CustomPainter`:
 |---|---|
 | Cargando el catálogo | esqueletos que laten con la silueta de la tarjeta (`ListaEsqueleto`) |
 | Consultando horarios | indicador «Consultando…» junto al contador de horas libres |
-| Servidor caído | banner ámbar «datos de demostración» + botón **Reintentar** |
+| Servidor caído, con copia guardada | banner ámbar «Mostrando tus datos guardados el …» + **Reintentar** |
+| Servidor caído, sin copia | banner ámbar «datos de demostración» + **Reintentar** |
 | Credenciales erróneas | aviso rojo en el propio formulario (no un diálogo) |
 | Correo ya registrado | mensaje específico del `409` del backend |
 | Hora tomada mientras confirmabas | vuelve al paso 2, recarga horarios y explica por qué |
@@ -550,12 +562,72 @@ UI.
 
 ---
 
+## 7.bis Integraciones con el dispositivo
+
+Lo que convierte esto en una app móvil y no en una web dentro de un marco.
+
+### Almacenamiento local (`data/preferencias.dart`)
+
+`shared_preferences` guarda la sesión, la bienvenida, el recorrido guiado, el
+tema y el caché de citas, doctores y servicios. Cada lectura va dentro de un
+`try/catch` y, si la plataforma no da almacenamiento, `disponible` es `false` y
+la app sigue funcionando sin recordar nada en vez de caerse.
+
+El caché no se usa como adorno: al abrir sin red, `AppState` restaura las citas
+guardadas y el banner dice **de cuándo es la copia**. Antes decía siempre
+«datos de demostración», lo que hacía dudar de unos datos que sí eran del
+usuario.
+
+Para que un modelo sobreviva al viaje a disco, todos tienen `aJson()` y
+`desdeJson()` probados de ida y vuelta. `Servicio` guarda además el **nombre**
+del icono, no el `IconData`: su `codePoint` depende de la fuente y el
+compilador de release poda los iconos que no se usan de forma literal.
+
+### Recordatorios (`servicios/notificaciones.dart`)
+
+`flutter_local_notifications` programa dos avisos por cita: 24 h antes y 1 h
+antes. El identificador se deriva del id de la cita
+(`idAviso(citaId, aviso)`), así que cancelar o reprogramar encuentra siempre
+los avisos correctos. Los que caen en el pasado se omiten.
+
+Limitación documentada: la zona horaria se deduce comparando el desfase UTC
+actual contra la base IANA, no con `flutter_timezone`. Basta aquí porque la
+clínica es local, pero cambiaría con horario de verano.
+
+### Biometría (`servicios/biometria.dart`)
+
+`local_auth` protege la **sesión guardada en el teléfono**. No sustituye a la
+contraseña y el token no se deriva de la huella: si falla la verificación en el
+splash, se cierra la sesión y se manda a `/login`. Los seis resultados posibles
+(concedido, denegado, no disponible, sin registrar, bloqueado, error) tienen
+mensaje propio.
+
+### Recorrido guiado (`core/tour_app.dart`, `widgets/tour_guiado.dart`)
+
+Al entrar por primera vez, un recorrido oscurece la pantalla e **ilumina los
+elementos reales**: el asistente, cada pestaña y el panel de administración si
+el usuario lo tiene. El foco se calcula preguntando a cada widget dónde está
+(`GlobalKey` + `localToGlobal`), no con posiciones fijas, así que cae en su
+sitio en cualquier pantalla. Se marca como visto **antes** de mostrarlo, para
+que cerrar la app a mitad no lo haga reaparecer solo.
+
+### Asistente (`screens/chat_screen.dart`)
+
+**Lía** responde consultando la base de datos. Botón flotante presente en todas
+las pestañas; cara dibujada con `CustomPainter`, a propósito distinta de un
+avatar de persona para que nadie la confunda con un médico. La pantalla dice
+que no es una inteligencia artificial y por qué se hizo así.
+
+---
+
 ## 8. Estado conocido
 
-- Verificado: `flutter analyze` limpio, **45/45 pruebas** en verde
+- Verificado: `flutter analyze` limpio, **67/67 pruebas** en verde
   (21 de contrato + 15 de la capa de API y avatares + 6 de la API de
-  administración + **3 de interfaz** sobre la barra inferior según el rol)
-  y `flutter build web --release` compila.
+  administración + 3 de interfaz sobre la barra inferior según el rol +
+  **22 de las integraciones con el dispositivo**: ida y vuelta del caché,
+  caducidad de citas, identificadores de recordatorio y contrato de las
+  respuestas del asistente) y `flutter build web --release` compila.
 - La API de administración se ejercitó con 22 comprobaciones sobre una base de
   datos de usar y tirar, más una prueba dedicada de autorización: con
   `ROLE_USER`, `/api/admin/resumen|citas|doctores|usuarios` devuelven **403**
@@ -564,10 +636,18 @@ UI.
   `dart run bin/inspeccionar_db.dart`, que lee el archivo `.db` por separado del
   servidor: los usuarios, las citas y los cambios de estado siguen ahí después
   de reiniciar.
-- `AppState.onboardingVisto` sigue **solo en memoria** (la introducción reaparece
-  en cada arranque; útil para la demostración). La sesión tampoco se persiste:
-  al reabrir la app hay que iniciar sesión otra vez. Ambas cosas se resolverían
-  con `shared_preferences`.
+- La sesión, la bienvenida, el recorrido guiado y el caché de citas y catálogo
+  se guardan con `shared_preferences`: al reabrir la app se entra directamente,
+  y sin red se ven las últimas citas conocidas con un aviso que indica de
+  cuándo es la copia.
+- Sin conexión **no** se puede reservar, cancelar ni reprogramar: hace falta
+  comprobar contra el servidor que el horario sigue libre. Es una decisión,
+  no una carencia; hacerlo en local admitiría dos reservas del mismo hueco.
+- Los recordatorios y la huella solo funcionan en Android: en web, `local_auth`
+  y `flutter_local_notifications` no tienen implementación, y la pantalla de
+  Ajustes lo dice en lugar de ofrecer interruptores que no hacen nada.
+- El tema oscuro **no** está: hay 164 referencias a `AppColors` fijadas en
+  claro por toda la interfaz, así que no es un cambio de una línea.
 - Los avatares son ilustraciones generadas; `fotoUrl` está soportado en el
   modelo y en el widget, pero la semilla de doctores no trae fotos reales.
 
@@ -592,17 +672,22 @@ Comparación hecha contra el proyecto Spring Boot original
 | `DashboardService` (estadísticas) | pestaña **Tablero**, con gráficas propias |
 | `UsuarioController` (activar, roles) | pestaña **Usuarios** |
 | `SecurityConfig` `/admin/**` | `_exigirAdmin()` → 401/403 |
+| `ChatController` / `chatbot.html` | `ChatScreen` (**Lía**) → `POST /api/chat`, por reglas sobre SQL |
+| `doctor-perfil.html` | `DoctorScreen`: ficha con próximos días con cupo |
+| `servicios.html` / `ServicioController` | `ServiciosScreen`: catálogo con los médicos de cada servicio |
 
 ### No cubierto (y por qué)
 
 | Falta | Qué es en la web | Estado |
 |---|---|---|
-| Chatbot | `ChatController` (`/api/chat`) usa **Spring AI + OpenAI** con herramientas MCP; `ChatService` es, aparte, un intérprete de comandos por palabras clave («listar usuarios», «buscar usuario …») | **No portado.** Necesita una clave de OpenAI de pago y un servidor MCP; es una decisión de alcance, no una limitación técnica |
-| Perfil de doctor | `doctor-perfil.html` — ficha con descripción larga y horarios | **No portado.** Los datos ya viajan en `Doctor`; falta la pantalla |
-| Página de servicios | `servicios.html` / `ServicioController` — catálogo completo | **Parcial.** Los servicios se ven en Inicio y se eligen al reservar, pero no hay pantalla de catálogo |
+| Chatbot **con modelo de lenguaje** | `ChatController` usa Spring AI + OpenAI con herramientas MCP | **Portado por reglas, no con IA.** Se eligió la vía de `ChatService` (reglas sobre el repositorio) por tres motivos: no necesita clave de pago, cada respuesta sale de una consulta SQL verificable, y no puede inventarse una cita que no existe |
 | Datos del paciente al reservar | `reservar.html` pide nombre, apellido, cédula, tipo de documento, correo, teléfono, dirección, y si es beneficiario (con documento del titular y edad) | **No portado.** La app reserva con la sesión del usuario; no pide esos campos ni guarda beneficiarios |
 | Compatibilidad servicio↔doctor | la web restringe qué servicio puede atender cada especialidad | **No portado.** Aquí cualquier doctor puede atender cualquier servicio |
 
-> Dicho en corto: **el flujo principal y el panel de administración están
-> completos y persisten en base de datos**; lo que falta es el chatbot con IA,
-> dos pantallas de consulta y el formulario largo de datos del paciente.
+> Dicho en corto: **el flujo principal, el panel de administración y el
+> asistente están completos y persisten en base de datos**; lo que falta es el
+> formulario largo de datos del paciente y la compatibilidad servicio↔doctor.
+>
+> Y hay cosas que la app hace y la plataforma web **no**: reprogramar una cita
+> sin cancelarla, recordatorios en el teléfono, entrada con huella, consulta
+> sin conexión y un recorrido guiado dentro de la app.
