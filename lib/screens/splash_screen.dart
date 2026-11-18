@@ -9,6 +9,7 @@ import '../core/trace/trace_logger.dart';
 import '../data/app_state.dart';
 import '../widgets/arte_animado.dart';
 import '../widgets/marca.dart';
+import 'main_shell.dart';
 
 /// CONTRATO: SplashScreen (PDF 1.2)
 ///   Requiere : ningun parametro externo
@@ -73,6 +74,23 @@ class _SplashScreenState extends State<SplashScreen>
     }
 
     final estado = AppStateScope.leer(context);
+
+    // Tres destinos, en este orden:
+    //   1. sesión guardada y válida -> directo a la app, sin contraseña
+    //   2. introducción no vista    -> /onboarding
+    //   3. resto                    -> /login
+    if (estado.autenticado) {
+      final pestana = estado.usuarioActual.esAdmin ? MainShell.indiceAdmin : 0;
+      traza.navegacion(
+        _origen,
+        'Sesión guardada en el dispositivo -> ${AppRoutes.home}',
+        contrato: 'SplashScreen.Garantiza (token restaurado)',
+      );
+      Navigator.of(context)
+          .pushReplacementNamed(AppRoutes.home, arguments: pestana);
+      return;
+    }
+
     final destino =
         estado.onboardingVisto ? AppRoutes.login : AppRoutes.onboarding;
 

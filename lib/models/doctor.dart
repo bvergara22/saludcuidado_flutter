@@ -89,6 +89,31 @@ class Doctor {
     );
   }
 
+  /// Vuelca el doctor al mismo formato que envía la API.
+  ///
+  /// CONTRATO: `Doctor.desdeJson(d.aJson())` devuelve un doctor igual a `d`.
+  /// Lo usa el caché sin conexión, que guarda la respuesta del servidor para
+  /// poder repintarla sin red. Hay una prueba que comprueba la ida y vuelta.
+  Map<String, dynamic> aJson() => {
+        'id': id,
+        'nombre': nombre,
+        'especialidad': especialidad,
+        'iniciales': iniciales,
+        'rating': rating,
+        'experiencia': experiencia,
+        'clinica': clinica,
+        'descripcion': descripcion,
+        'color': color.toARGB32(),
+        'horariosDisponibles': horariosDisponibles,
+        'avatarSemilla': avatarSemilla,
+        if (fotoUrl != null) 'fotoUrl': fotoUrl,
+        if (titulo != null) 'titulo': titulo,
+        if (nombrePila != null) 'nombrePila': nombrePila,
+        if (apellido != null) 'apellido': apellido,
+        if (correo != null) 'correo': correo,
+        if (telefono != null) 'telefono': telefono,
+      };
+
   /// Color de fondo del avatar (misma tonalidad, baja opacidad).
   Color get colorFondo => color.withValues(alpha: 0.14);
 

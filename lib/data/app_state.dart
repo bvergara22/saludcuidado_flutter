@@ -7,9 +7,11 @@ import '../models/doctor.dart';
 import '../models/estado_cita.dart';
 import '../models/servicio.dart';
 import '../models/usuario.dart';
+import '../servicios/notificaciones.dart';
 import 'api/api_cliente.dart';
 import 'api/repositorio.dart';
 import 'horarios_service.dart';
+import 'preferencias.dart';
 import 'sample_data.dart';
 
 /// Fase de carga de los datos remotos, usada por la UI para decidir si
@@ -145,6 +147,8 @@ class AppState extends ChangeNotifier {
       final sesion = await _repo!.iniciarSesion(email, password);
       _enLinea = true;
       _usuario = sesion.usuario;
+      await Preferencias.yo
+          .guardarSesion(sesion.token, sesion.usuario.aJson());
       traza.accion(_origen, 'Sesión iniciada en el servidor: $email',
           contrato: 'LoginScreen.Garantiza (POST /api/auth/login)');
       notifyListeners();
@@ -176,6 +180,8 @@ class AppState extends ChangeNotifier {
       final sesion = await _repo!.registrar(nombre, email, password);
       _enLinea = true;
       _usuario = sesion.usuario;
+      await Preferencias.yo
+          .guardarSesion(sesion.token, sesion.usuario.aJson());
       traza.accion(_origen, 'Usuario registrado en el servidor: $email',
           contrato: 'RegistroScreen.Garantiza (POST /api/auth/registro)');
       notifyListeners();
@@ -190,6 +196,7 @@ class AppState extends ChangeNotifier {
   Future<void> cerrarSesion() async {
     final email = _usuario?.email ?? '(sin sesión)';
     _usuario = null;
+    await Preferencias.yo.borrarSesion();
     if (!_soloLocal) {
       await _repo!.cerrarSesion();
       // Las citas son del usuario: se vuelve al respaldo de ejemplo.
@@ -214,27 +221,47 @@ class AppState extends ChangeNotifier {
 
   // -------------------------------------------------------- introducción
 
-  bool _onboardingVisto = false;
+  bool _onboardingVisto = Preferencias.yo.onboardingVisto;
 
   /// Indica si la introducción animada ya se mostró.
   ///
-  /// Se guarda solo en memoria, así que vuelve a aparecer en cada arranque.
-  /// Para mostrarla una única vez por instalación habría que persistirla
-  /// (p. ej. con el paquete `shared_preferences`); se mantiene en memoria
-  /// para no añadir dependencias externas al prototipo.
+  /// Se guarda en el almacenamiento del dispositivo ([Preferencias]), así
+  /// que aparece una sola vez por instalación y no en cada arranque.
   bool get onboardingVisto => _onboardingVisto;
 
   void marcarOnboardingVisto() {
     if (_onboardingVisto) return;
     _onboardingVisto = true;
-    traza.accion(_origen, 'Introducción marcada como vista');
+    Preferencias.yo.marcarOnboardingVisto(true);
+    traza.accion(_origen, 'Introducción marcada como vista (guardado)');
     notifyListeners();
   }
 
   /// Permite volver a ver la introducción desde Perfil.
   void reiniciarOnboarding() {
     _onboardingVisto = false;
+    Preferencias.yo.marcarOnboardingVisto(false);
     traza.accion(_origen, 'Introducción reiniciada');
+    notifyListeners();
+  }
+
+  // ----------------------------------------------------------------- tema
+
+  ModoTema _tema = Preferencias.yo.tema;
+
+  ModoTema get tema => _tema;
+
+  /// Modo que debe usar `MaterialApp`.
+  ThemeMode get modoTema => switch (_tema) {
+        ModoTema.claro => ThemeMode.light,
+        ModoTema.oscuro => ThemeMode.dark,
+        ModoTema.sistema => ThemeMode.system,
+      };
+
+  Future<void> cambiarTema(ModoTema modo) async {
+    if (_tema == modo) return;
+    _tema = modo;
+    await Preferencias.yo.guardarTema(modo);
     notifyListeners();
   }
 
@@ -289,8 +316,22 @@ class AppState extends ChangeNotifier {
   /// CONTRATO: citas: List<Cita> (puede estar vacia).
   List<Cita> get citas => List.unmodifiable(_citas);
 
+  /// CONTRATO: porEstado
+  ///   Garantiza: la lista va ordenada por fecha y hora, y la pestaña de
+  ///              «Próximas» no incluye citas cuya hora ya pasó
+  ///   Falla si : nunca; una pestaña sin citas devuelve lista vacía
+  ///
+  /// Las vencidas salen de «Próximas» y entran en [citasVencidas]: siguen
+  /// estando PROGRAMADA en la base de datos, porque nadie confirmó que se
+  /// asistiera ni que se cancelara, pero anunciarlas como próximas era
+  /// mentira (ver `Cita.vencidaA`).
   List<Cita> porEstado(EstadoCita estado) {
-    final lista = _citas.where((c) => c.estado == estado).toList();
+    final ahora = DateTime.now();
+    final lista = _citas
+        .where((c) =>
+            c.estado == estado &&
+            (estado != EstadoCita.proxima || !c.vencidaA(ahora)))
+        .toList();
     lista.sort((a, b) {
       final cmp = a.fecha.compareTo(b.fecha);
       return cmp != 0 ? cmp : a.hora.compareTo(b.hora);
@@ -298,8 +339,18 @@ class AppState extends ChangeNotifier {
     return lista;
   }
 
+  /// Citas que siguen PROGRAMADA pero cuya hora ya pasó: ni se atendieron
+  /// ni se cancelaron. Se muestran aparte para que la persona decida.
+  /// Van de la más reciente a la más antigua.
+  List<Cita> get citasVencidas {
+    final ahora = DateTime.now();
+    final lista = _citas.where((c) => c.vencidaA(ahora)).toList();
+    lista.sort((a, b) => b.momento.compareTo(a.momento));
+    return lista;
+  }
+
   /// Proxima cita mostrada en HomeScreen: la cita en estado `proxima`
-  /// con fecha/hora mas cercana. Null si no hay ninguna.
+  /// con fecha/hora mas cercana que todavía no ha pasado. Null si no hay.
   Cita? get proximaCita {
     final proximas = porEstado(EstadoCita.proxima);
     return proximas.isEmpty ? null : proximas.first;
@@ -331,14 +382,25 @@ class AppState extends ChangeNotifier {
     await repo.comprobarConexion();
     _enLinea = repo.enLinea;
 
+    await _restaurarSesionGuardada();
+
     try {
       final resultados = await Future.wait([
         repo.doctores(),
         repo.servicios(),
       ]);
-      _reemplazarDoctores(resultados[0] as List<Doctor>);
-      _reemplazarServicios(resultados[1] as List<Servicio>);
+      final doctores = resultados[0] as List<Doctor>;
+      final servicios = resultados[1] as List<Servicio>;
+      _reemplazarDoctores(doctores);
+      _reemplazarServicios(servicios);
       _fase = FaseCarga.listo;
+      if (_enLinea) {
+        _desdeCache = false;
+        await Preferencias.yo.guardarCache(
+          doctores: [for (final d in doctores) d.aJson()],
+          servicios: [for (final s in servicios) s.aJson()],
+        );
+      }
       traza.datos(
         _origen,
         'Catálogo cargado: ${_doctores.length} doctores, '
@@ -346,14 +408,65 @@ class AppState extends ChangeNotifier {
         '(${_enLinea ? "servidor" : "respaldo local"})',
       );
     } catch (e) {
-      // El catalogo tiene respaldo, así que esto no deja la app vacía.
+      // Orden de preferencia cuando el servidor falla: primero lo último
+      // que vio este dispositivo, y solo si no hay nada, los de ejemplo.
       _fase = FaseCarga.listo;
       _mensajeError = _texto(e);
-      traza.error(_origen, 'Catálogo con respaldo local: ${_texto(e)}');
+      final rescatado = _restaurarCatalogoDeCache();
+      traza.error(
+        _origen,
+        'Catálogo desde ${rescatado ? "el caché del dispositivo" : "los datos "
+            "de ejemplo"}: ${_texto(e)}',
+      );
     }
     notifyListeners();
 
     if (autenticado) await cargarCitas();
+  }
+
+  /// CONTRATO: _restaurarSesionGuardada
+  ///   Requiere : nada; si no hay token guardado no hace nada
+  ///   Garantiza: si el token sigue siendo válido, la app arranca con la
+  ///              sesión abierta sin pedir la contraseña otra vez
+  ///   Falla si : el servidor rechaza el token (401) -> se borra del
+  ///              dispositivo y la app arranca en /login
+  ///
+  /// Sin servidor no se descarta el token: puede seguir siendo bueno y es
+  /// solo la red la que falla, así que se conserva y se pinta el usuario
+  /// guardado para que la app sea usable sin conexión.
+  Future<void> _restaurarSesionGuardada() async {
+    final prefs = Preferencias.yo;
+    final token = prefs.token;
+    if (token == null || token.isEmpty) return;
+
+    if (!_enLinea) {
+      final guardado = prefs.usuario;
+      if (guardado != null) {
+        _usuario = Usuario.desdeJson(guardado);
+        traza.datos(
+          _origen,
+          'Sesión local de ${_usuario!.email} (sin servidor para validarla)',
+        );
+      }
+      return;
+    }
+
+    try {
+      _usuario = await _repo!.restaurarSesion(token);
+      traza.accion(
+        _origen,
+        'Sesión restaurada sin pedir contraseña: ${_usuario!.email}',
+        contrato: 'SplashScreen.Garantiza (token válido -> /home)',
+      );
+      await prefs.guardarSesion(token, _usuario!.aJson());
+    } on ApiExcepcion catch (e) {
+      traza.error(_origen, 'Token guardado rechazado (${e.estado}): se borra');
+      await prefs.borrarSesion();
+    } on SinConexion {
+      final guardado = prefs.usuario;
+      if (guardado != null) _usuario = Usuario.desdeJson(guardado);
+      traza.error(_origen, 'Sesión no validada: el servidor no respondió');
+    }
   }
 
   /// Recarga catalogo y citas (gesto "deslizar para actualizar").
@@ -377,17 +490,96 @@ class AppState extends ChangeNotifier {
       _fase = FaseCarga.listo;
       traza.datos(_origen, 'Citas cargadas del servidor: ${remotas.length}',
           contrato: 'MisCitasScreen.Requiere (citas del usuario)');
+      // El teléfono queda al día: se guardan para poder verlas sin red y
+      // se reprograman los recordatorios con lo que realmente hay.
+      await Preferencias.yo
+          .guardarCache(citas: [for (final c in remotas) c.aJson()]);
+      await Notificaciones.yo.sincronizar(_citas);
     } on SinConexion catch (e) {
       _enLinea = false;
       _fase = FaseCarga.listo;
       _mensajeError = e.detalle;
-      traza.error(_origen, 'Citas no cargadas: ${e.detalle} (se usa respaldo)');
+      _restaurarCitasDeCache(e.detalle);
     } on ApiExcepcion catch (e) {
       _fase = FaseCarga.error;
       _mensajeError = e.mensaje;
       traza.error(_origen, 'Citas no cargadas: ${e.mensaje}');
     }
     notifyListeners();
+  }
+
+  // ----------------------------------------------------------------- caché
+
+  /// Momento en que se guardaron por última vez los datos del dispositivo.
+  /// La interfaz lo usa para avisar de que lo que se ve no es de ahora.
+  DateTime? get fechaCache => Preferencias.yo.fechaCache;
+
+  /// true cuando lo que se está mostrando viene del disco, no del servidor.
+  bool _desdeCache = false;
+
+  bool get desdeCache => _desdeCache;
+
+  /// CONTRATO: _restaurarCitasDeCache
+  ///   Requiere : haber guardado citas en una sesión anterior
+  ///   Garantiza: la lista de citas pasa a ser la última conocida del
+  ///              usuario, en lugar de las de ejemplo de otra persona
+  ///   Falla si : no hay caché -> se deja el respaldo de ejemplo y se
+  ///              registra en la traza
+  ///
+  /// Sin esto, abrir la app sin red mostraba las citas de muestra como si
+  /// fueran tuyas, que es peor que no mostrar nada.
+  void _restaurarCitasDeCache(String motivo) {
+    final guardadas = Preferencias.yo.citasEnCache;
+    if (guardadas.isEmpty) {
+      traza.error(_origen, 'Citas no cargadas: $motivo (sin caché en disco)');
+      return;
+    }
+    final recuperadas = <Cita>[];
+    for (final e in guardadas) {
+      try {
+        recuperadas.add(Cita.desdeJson(e as Map<String, dynamic>));
+      } catch (err) {
+        traza.error(_origen, 'Cita del caché descartada: $err');
+      }
+    }
+    if (recuperadas.isEmpty) return;
+    _citas
+      ..clear()
+      ..addAll(recuperadas);
+    _desdeCache = true;
+    traza.datos(
+      _origen,
+      '${recuperadas.length} citas recuperadas del dispositivo ($motivo)',
+      contrato: 'MisCitasScreen.Requiere (modo sin conexión)',
+    );
+  }
+
+  /// Igual que el anterior pero para el catálogo, que se pinta antes de
+  /// tener sesión. Devuelve true si consiguió algo.
+  bool _restaurarCatalogoDeCache() {
+    final prefs = Preferencias.yo;
+    final doctores = <Doctor>[];
+    for (final e in prefs.doctoresEnCache) {
+      try {
+        doctores.add(Doctor.desdeJson(e as Map<String, dynamic>));
+      } catch (_) {}
+    }
+    final servicios = <Servicio>[];
+    for (final e in prefs.serviciosEnCache) {
+      try {
+        servicios.add(Repositorio.servicioDesdeJson(e as Map<String, dynamic>));
+      } catch (_) {}
+    }
+    if (doctores.isEmpty && servicios.isEmpty) return false;
+    _reemplazarDoctores(doctores);
+    _reemplazarServicios(servicios);
+    _desdeCache = true;
+    traza.datos(
+      _origen,
+      'Catálogo recuperado del dispositivo: ${doctores.length} doctores, '
+      '${servicios.length} servicios',
+    );
+    return true;
   }
 
   void _reemplazarDoctores(List<Doctor> lista) {
@@ -468,6 +660,7 @@ class AppState extends ChangeNotifier {
           '${Fechas.iso(fecha)} $hora (estado PROGRAMADA)',
           contrato: 'ReservarScreen.Garantiza (paso 3 -> confirmación)',
         );
+        await Notificaciones.yo.programar(cita);
         notifyListeners();
         return cita;
       } on ApiExcepcion catch (e) {
@@ -573,6 +766,8 @@ class AppState extends ChangeNotifier {
           'Cita $id -> ${nuevo.estadoBackend} en la base de datos',
           contrato: 'CitaService.cambiarEstadoCita',
         );
+        // Una cita que ya no está programada no debe seguir avisando.
+        await Notificaciones.yo.cancelar(id);
         notifyListeners();
         return true;
       } on ApiExcepcion catch (e) {

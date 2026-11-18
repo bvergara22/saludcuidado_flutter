@@ -1,6 +1,21 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Recordatorios de cita (lib/servicios/notificaciones.dart).
+         POST_NOTIFICATIONS es permiso en tiempo de ejecución desde
+         Android 13 (API 33); RECEIVE_BOOT_COMPLETED hace que los avisos
+         ya programados sobrevivan a un reinicio del teléfono. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    <uses-permission android:name="android.permission.VIBRATE"/>
+
+    <!-- Desbloqueo con huella o rostro (lib/servicios/biometria.dart). -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
+
+    <!-- La API corre en texto plano durante el desarrollo. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+
     <application
-        android:label="saludcuidado"
+        android:label="SaludCuidado"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
@@ -25,6 +40,22 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <!-- Vuelve a programar los recordatorios tras reiniciar el
+             teléfono. Sin esto, las alarmas pendientes se pierden. -->
+        <receiver
+            android:exported="false"
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+                <action android:name="android.intent.action.QUICKBOOT_POWERON"/>
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON"/>
+            </intent-filter>
+        </receiver>
+        <receiver
+            android:exported="false"
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver"/>
+
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

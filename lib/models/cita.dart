@@ -1,3 +1,4 @@
+import '../core/fechas.dart';
 import 'doctor.dart';
 import 'estado_cita.dart';
 
@@ -83,6 +84,44 @@ class Cita {
         pacienteEmail: pacienteEmail,
         pacienteSemilla: pacienteSemilla,
       );
+
+  /// Vuelca la cita al mismo formato que envía la API, para el caché
+  /// sin conexión. `Cita.desdeJson(c.aJson())` devuelve una cita igual.
+  Map<String, dynamic> aJson() => {
+        'id': id,
+        'doctor': doctor.aJson(),
+        'fecha': Fechas.iso(fecha),
+        'hora': hora,
+        'estado': estado.estadoBackend,
+        'servicio': servicio,
+        if (pacienteNombre != null)
+          'paciente': {
+            'nombre': pacienteNombre,
+            'email': pacienteEmail,
+            'avatarSemilla': pacienteSemilla,
+          },
+      };
+
+  /// Instante exacto de la cita, combinando fecha y hora "HH:mm".
+  DateTime get momento {
+    final partes = hora.split(':');
+    final h = int.tryParse(partes.first) ?? 0;
+    final m = partes.length > 1 ? int.tryParse(partes[1]) ?? 0 : 0;
+    return DateTime(fecha.year, fecha.month, fecha.day, h, m);
+  }
+
+  /// CONTRATO: una cita está vencida cuando sigue PROGRAMADA y su hora
+  /// ya pasó. Ni se completó ni se canceló: simplemente no se asistió.
+  ///
+  /// El backend guarda tres estados (PROGRAMADA, COMPLETADA, CANCELADA) y
+  /// ninguno significa "se le pasó la hora". En vez de reescribir el estado
+  /// en la base de datos —que sería afirmar algo que nadie comprobó— la app
+  /// lo deduce de la fecha. Así una cita del martes pasado deja de
+  /// anunciarse como «Próxima» sin inventar que se atendió.
+  bool vencidaA(DateTime ahora) =>
+      estado == EstadoCita.proxima && momento.isBefore(ahora);
+
+  bool get vencida => vencidaA(DateTime.now());
 
   /// Clave de ocupacion usada por HorariosService (fecha + hora).
   String get claveSlot =>

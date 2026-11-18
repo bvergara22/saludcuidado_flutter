@@ -91,6 +91,32 @@ class Repositorio {
     );
   }
 
+  /// CONTRATO: restaurarSesion
+  ///   Requiere : un token guardado en el dispositivo
+  ///   Garantiza: si el servidor lo reconoce, devuelve el usuario dueño de
+  ///              la sesión y el cliente queda autenticado
+  ///   Falla si : el token caducó o no existe -> ApiExcepcion 401, y quien
+  ///              llama debe borrarlo del almacenamiento local
+  ///
+  /// Trazabilidad backend: `GET /api/auth/yo` resuelve el token contra la
+  /// tabla `sesiones`, igual que haría `CustomUserDetailsService` con la
+  /// cookie de sesión en la plataforma web.
+  Future<Usuario> restaurarSesion(String token) async {
+    api.token = token;
+    try {
+      final j = await api.obtener('/api/auth/yo');
+      _enLinea = true;
+      final usuario =
+          Usuario.desdeJson(j['usuario'] as Map<String, dynamic>? ?? j);
+      traza.datos(_origen, 'Sesión restaurada para ${usuario.email}');
+      return usuario;
+    } catch (e) {
+      // Un token que el servidor no acepta no sirve para nada más.
+      if (e is ApiExcepcion && e.esNoAutorizado) api.token = null;
+      rethrow;
+    }
+  }
+
   Future<void> cerrarSesion() async {
     try {
       await api.publicar('/api/auth/logout', const {});
@@ -234,13 +260,14 @@ class Repositorio {
 
   static Servicio servicioDesdeJson(Map<String, dynamic> j) {
     final nombre = j['nombre'] as String? ?? 'Servicio';
+    final iconoNombre = j['icono'] as String? ?? '';
     return Servicio(
       id: j['id'] as String,
       nombre: nombre,
       descripcion: j['descripcion'] as String? ?? '',
       duracionMinutos: (j['duracionMinutos'] as num?)?.toInt() ?? 30,
-      icono: iconosServicio[j['icono'] as String? ?? ''] ??
-          Icons.local_hospital_outlined,
+      icono: iconosServicio[iconoNombre] ?? Icons.local_hospital_outlined,
+      iconoNombre: iconoNombre,
       color: Color((j['color'] as num?)?.toInt() ?? 0xFF1A5FBF),
     );
   }

@@ -33,6 +33,17 @@ class Usuario {
     );
   }
 
+  /// Vuelca el usuario al mismo formato que envía la API.
+  /// Lo guarda [Preferencias] para poder pintar Inicio y Perfil nada más
+  /// abrir la app, antes de que el servidor confirme el token.
+  Map<String, dynamic> aJson() => {
+        'nombre': nombre,
+        'email': email,
+        'iniciales': iniciales,
+        'avatarSemilla': avatarSemilla,
+        'roles': roles,
+      };
+
   static String _inicialesDe(String nombreCompleto) {
     final partes = nombreCompleto
         .trim()
