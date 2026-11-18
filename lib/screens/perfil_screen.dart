@@ -198,8 +198,12 @@ class PerfilScreen extends StatelessWidget {
             ),
             _Opcion(
               icono: Icons.notifications_none_rounded,
-              titulo: 'Notificaciones',
-              onTap: () => _enDesarrollo(context, 'Notificaciones'),
+              titulo: 'Ajustes del dispositivo',
+              subtitulo: 'Recordatorios, huella y datos sin conexión',
+              onTap: () {
+                traza.navegacion(_origen, 'Abrir ${AppRoutes.ajustes}');
+                Navigator.of(context).pushNamed(AppRoutes.ajustes);
+              },
             ),
           ]),
 

@@ -731,6 +731,61 @@ class AppState extends ChangeNotifier {
     return cita;
   }
 
+  /// CONTRATO: reprogramarCita
+  ///   Requiere : el id de una cita propia y un hueco libre del mismo doctor
+  ///   Garantiza: la cita queda movida conservando su id y su historial, y
+  ///              sus recordatorios se reprograman a la hora nueva
+  ///   Falla si : el servidor rechaza el cambio -> false y [mensajeError]
+  ///
+  /// Sin servidor no se intenta: mover una cita en memoria y que el resto
+  /// del mundo siga creyendo que es a otra hora sería peor que no hacerlo.
+  Future<bool> reprogramarCita(
+    String id, {
+    required DateTime fecha,
+    required String hora,
+  }) async {
+    final i = _citas.indexWhere((c) => c.id == id);
+    if (i == -1) {
+      traza.error(_origen, 'No se encontró la cita $id para reprogramar');
+      return false;
+    }
+    if (_soloLocal || !_enLinea) {
+      _mensajeError = 'Necesitas conexión para reprogramar una cita.';
+      traza.error(_origen, 'Reprogramación no intentada: sin servidor');
+      notifyListeners();
+      return false;
+    }
+
+    final antes = '${Fechas.iso(_citas[i].fecha)} ${_citas[i].hora}';
+    try {
+      final actualizada =
+          await _repo!.reprogramar(id, fecha: fecha, hora: hora);
+      _citas[i] = actualizada;
+      _mensajeError = null;
+      traza.datos(
+        _origen,
+        'Cita $id movida de $antes a ${Fechas.iso(fecha)} $hora',
+        contrato: 'PATCH /api/citas/<id> {fecha, hora}',
+      );
+      // Los avisos viejos apuntaban a la hora anterior.
+      await Notificaciones.yo.cancelar(id);
+      await Notificaciones.yo.programar(actualizada);
+      notifyListeners();
+      return true;
+    } on ApiExcepcion catch (e) {
+      _mensajeError = e.mensaje;
+      traza.error(_origen, 'Reprogramación rechazada: ${e.mensaje}');
+      notifyListeners();
+      return false;
+    } on SinConexion catch (e) {
+      _enLinea = false;
+      _mensajeError = 'Sin conexión: la cita no se movió.';
+      traza.error(_origen, 'Reprogramación sin servidor: ${e.detalle}');
+      notifyListeners();
+      return false;
+    }
+  }
+
   /// Cancela una cita existente.
   /// Trazabilidad backend: PATCH /api/citas/<id> {estado: CANCELADA}, que
   /// además libera el horario gracias al índice único parcial.

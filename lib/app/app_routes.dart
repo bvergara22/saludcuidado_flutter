@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/trace/trace_logger.dart';
 import '../models/doctor.dart';
 import '../screens/admin_screen.dart';
+import '../screens/ajustes_screen.dart';
 import '../screens/doctores_screen.dart';
 import '../screens/login_screen.dart';
 import '../screens/main_shell.dart';
@@ -41,6 +42,7 @@ class AppRoutes {
   static const String onboarding = '/onboarding';
   static const String trazabilidad = '/trazabilidad';
   static const String admin = AdminScreen.ruta;
+  static const String ajustes = AjustesScreen.ruta;
 
   /// Generador central de rutas. Centralizarlo permite registrar la traza
   /// y resolver los argumentos de forma tipada.
@@ -83,6 +85,9 @@ class AppRoutes {
 
       case trazabilidad:
         return _ruta(const TrazabilidadScreen(), settings);
+
+      case ajustes:
+        return _ruta(const AjustesScreen(), settings);
 
       case admin:
         // La ruta no decide permisos: AdminScreen comprueba el rol y el

@@ -7,6 +7,7 @@ import '../app/app_routes.dart';
 import '../app/app_theme.dart';
 import '../core/trace/trace_logger.dart';
 import '../data/app_state.dart';
+import '../servicios/biometria.dart';
 import '../widgets/arte_animado.dart';
 import '../widgets/marca.dart';
 import 'main_shell.dart';
@@ -80,14 +81,7 @@ class _SplashScreenState extends State<SplashScreen>
     //   2. introducción no vista    -> /onboarding
     //   3. resto                    -> /login
     if (estado.autenticado) {
-      final pestana = estado.usuarioActual.esAdmin ? MainShell.indiceAdmin : 0;
-      traza.navegacion(
-        _origen,
-        'Sesión guardada en el dispositivo -> ${AppRoutes.home}',
-        contrato: 'SplashScreen.Garantiza (token restaurado)',
-      );
-      Navigator.of(context)
-          .pushReplacementNamed(AppRoutes.home, arguments: pestana);
+      _entrarConSesion(estado);
       return;
     }
 
@@ -97,6 +91,47 @@ class _SplashScreenState extends State<SplashScreen>
     traza.navegacion(_origen, 'Navegación automática -> $destino',
         contrato: 'SplashScreen.Garantiza');
     Navigator.of(context).pushReplacementNamed(destino);
+  }
+
+  /// CONTRATO: _entrarConSesion
+  ///   Requiere : una sesión restaurada del almacenamiento del dispositivo
+  ///   Garantiza: si el desbloqueo biométrico está activo, solo se entra
+  ///              tras confirmarlo con el sistema operativo
+  ///   Falla si : la verificación no se concede -> se cierra la sesión y
+  ///              se vuelve a /login, que es el camino seguro
+  ///
+  /// La huella protege el token ya guardado en este teléfono. Quien no la
+  /// pase no se queda a medias: se le pide la contraseña otra vez.
+  Future<void> _entrarConSesion(AppState estado) async {
+    if (await Biometria.yo.activa) {
+      traza.navegacion(_origen, 'Sesión guardada: se pide verificación');
+      final r = await Biometria.yo.verificar();
+      if (!mounted) return;
+      if (r != ResultadoBiometria.concedido) {
+        traza.error(
+          _origen,
+          'Desbloqueo no concedido (${r.name}): se cierra la sesión',
+          contrato: 'SplashScreen.Falla si (biometría denegada -> /login)',
+        );
+        await estado.cerrarSesion();
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(r.mensaje)),
+        );
+        Navigator.of(context).pushReplacementNamed(AppRoutes.login);
+        return;
+      }
+    }
+
+    if (!mounted) return;
+    final pestana = estado.usuarioActual.esAdmin ? MainShell.indiceAdmin : 0;
+    traza.navegacion(
+      _origen,
+      'Sesión guardada en el dispositivo -> ${AppRoutes.home}',
+      contrato: 'SplashScreen.Garantiza (token restaurado)',
+    );
+    Navigator.of(context)
+        .pushReplacementNamed(AppRoutes.home, arguments: pestana);
   }
 
   @override

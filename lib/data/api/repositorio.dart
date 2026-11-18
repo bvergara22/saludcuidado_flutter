@@ -225,6 +225,29 @@ class Repositorio {
     return Cita.desdeJson(j['cita'] as Map<String, dynamic>);
   }
 
+  /// CONTRATO: reprogramar
+  ///   Requiere : una cita existente del usuario y un hueco libre
+  ///   Garantiza: la cita queda movida, con el mismo id, y vuelve a
+  ///              estado PROGRAMADA
+  ///   Falla si : el hueco está ocupado o la cita ya se completó -> 409;
+  ///              el momento ya pasó -> 400
+  ///
+  /// Trazabilidad backend: `PATCH /api/citas/<id>` con fecha y hora. En la
+  /// plataforma web esto no existe: allí hay que cancelar y volver a
+  /// reservar, con lo que se pierde el hilo de la cita original.
+  Future<Cita> reprogramar(
+    String citaId, {
+    required DateTime fecha,
+    required String hora,
+  }) async {
+    final j = await api.parchear('/api/citas/$citaId', {
+      'fecha': _iso(fecha),
+      'hora': hora,
+    });
+    _enLinea = true;
+    return Cita.desdeJson(j['cita'] as Map<String, dynamic>);
+  }
+
   Future<Cita> cambiarEstado(String citaId, EstadoCita estado) async {
     final j = await api.parchear('/api/citas/$citaId', {
       'estado': estado.estadoBackend,

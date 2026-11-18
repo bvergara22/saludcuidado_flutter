@@ -8,6 +8,7 @@ import '../models/cita.dart';
 import '../models/estado_cita.dart';
 import '../widgets/cita_card.dart';
 import '../widgets/estados_ui.dart';
+import 'reprogramar_hoja.dart';
 
 /// CONTRATO: MisCitasScreen (PDF 1.2)
 ///   Requiere : sampleCitas: List<Cita> (puede estar vacia)
@@ -27,22 +28,33 @@ class _MisCitasScreenState extends State<MisCitasScreen>
     with SingleTickerProviderStateMixin {
   static const String _origen = 'MisCitasScreen';
 
-  /// Las 3 pestanas corresponden exactamente a los valores de EstadoCita.
+  /// Las 3 primeras pestañas corresponden a los valores de EstadoCita.
   static const List<EstadoCita> pestanas = [
     EstadoCita.proxima,
     EstadoCita.completada,
     EstadoCita.cancelada,
   ];
 
+  /// Nombres visibles, incluida la cuarta.
+  ///
+  /// «Vencidas» no es un EstadoCita: son citas que siguen PROGRAMADA en la
+  /// base de datos pero cuya hora ya pasó (ver `Cita.vencidaA`). Tienen
+  /// pestaña propia porque es lo único que se puede hacer con ellas:
+  /// reprogramarlas o cancelarlas.
+  static const int indiceVencidas = 3;
+
   late final TabController _tabs =
-      TabController(length: pestanas.length, vsync: this)
+      TabController(length: pestanas.length + 1, vsync: this)
         ..addListener(_alCambiarPestana);
 
   void _alCambiarPestana() {
     if (_tabs.indexIsChanging) return;
+    final nombre = _tabs.index == indiceVencidas
+        ? 'Vencidas'
+        : pestanas[_tabs.index].etiquetaPlural;
     traza.accion(
       _origen,
-      'Pestaña activa: ${pestanas[_tabs.index].etiquetaPlural}',
+      'Pestaña activa: $nombre',
       contrato: 'MisCitasScreen.Garantiza (filtrado por EstadoCita)',
     );
   }
@@ -109,7 +121,23 @@ class _MisCitasScreenState extends State<MisCitasScreen>
       ),
     );
 
-    if (ok) _tabs.animateTo(2);
+    if (ok) _tabs.animateTo(3);
+  }
+
+  /// CONTRATO: _reprogramar
+  ///   Requiere : una cita próxima o vencida
+  ///   Garantiza: si el servidor acepta el cambio, la lista se actualiza y
+  ///              la vista salta a «Próximas», donde ahora está la cita
+  ///   Falla si : el servidor lo rechaza -> la hoja lo explica y no cierra
+  Future<void> _reprogramar(Cita cita) async {
+    traza.accion(_origen, 'Solicitud de reprogramación de ${cita.id}');
+    final movida = await mostrarHojaReprogramar(context, cita);
+    if (!movida || !mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Cita reprogramada')),
+    );
+    _tabs.animateTo(0);
   }
 
   // ---------------------------------------------------------------- build
@@ -131,9 +159,12 @@ class _MisCitasScreenState extends State<MisCitasScreen>
           labelStyle:
               const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
           unselectedLabelStyle: const TextStyle(fontSize: 13.5),
+          isScrollable: true,
+          tabAlignment: TabAlignment.start,
           tabs: [
             for (final p in pestanas)
               Tab(text: '${p.etiquetaPlural} (${estado.porEstado(p).length})'),
+            Tab(text: 'Vencidas (${estado.citasVencidas.length})'),
           ],
         ),
       ),
@@ -156,9 +187,27 @@ class _MisCitasScreenState extends State<MisCitasScreen>
                             onCancelar: p == EstadoCita.proxima
                                 ? _confirmarCancelacion
                                 : null,
+                            onReprogramar: p == EstadoCita.proxima ||
+                                    p == EstadoCita.cancelada
+                                ? _reprogramar
+                                : null,
                             onReservar: _irAReservar,
                           ),
                   ),
+                // Vencidas: se pueden mover a una fecha nueva o cerrar
+                // cancelándolas. Lo que no se puede es dejarlas fingiendo
+                // que son próximas.
+                RefreshIndicator(
+                  onRefresh: estado.cargarCitas,
+                  child: _ListaCitas(
+                    citas: estado.citasVencidas,
+                    estado: EstadoCita.proxima,
+                    vencidas: true,
+                    onCancelar: _confirmarCancelacion,
+                    onReprogramar: _reprogramar,
+                    onReservar: _irAReservar,
+                  ),
+                ),
               ],
             ),
           ),
@@ -182,13 +231,20 @@ class _ListaCitas extends StatelessWidget {
   final List<Cita> citas;
   final EstadoCita estado;
   final void Function(Cita)? onCancelar;
+  final void Function(Cita)? onReprogramar;
   final VoidCallback onReservar;
+
+  /// true en la pestaña de citas vencidas, que no es un EstadoCita y
+  /// necesita su propio mensaje cuando está vacía.
+  final bool vencidas;
 
   const _ListaCitas({
     required this.citas,
     required this.estado,
     required this.onCancelar,
+    this.onReprogramar,
     required this.onReservar,
+    this.vencidas = false,
   });
 
   @override
@@ -209,14 +265,22 @@ class _ListaCitas extends StatelessWidget {
                 height: 68,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: estado.color.withValues(alpha: 0.10),
+                  color: vencidas
+                      ? AppColors.acento.withValues(alpha: 0.12)
+                      : estado.color.withValues(alpha: 0.10),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(estado.icono, size: 32, color: estado.color),
+                child: Icon(
+                  vencidas ? Icons.history_rounded : estado.icono,
+                  size: 32,
+                  color: vencidas ? AppColors.acento : estado.color,
+                ),
               ),
               const SizedBox(height: 16),
               Text(
-                estado.mensajeVacio,
+                vencidas
+                    ? 'No tienes citas vencidas.\nTodas tus citas están al día.'
+                    : estado.mensajeVacio,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontSize: 13.5,
@@ -224,7 +288,7 @@ class _ListaCitas extends StatelessWidget {
                   height: 1.5,
                 ),
               ),
-                if (estado == EstadoCita.proxima) ...[
+                if (estado == EstadoCita.proxima && !vencidas) ...[
                   const SizedBox(height: 18),
                   SizedBox(
                     width: 200,
@@ -251,8 +315,11 @@ class _ListaCitas extends StatelessWidget {
       separatorBuilder: (_, __) => const SizedBox(height: 11),
       itemBuilder: (context, i) => CitaCard(
         cita: citas[i],
+        vencida: vencidas,
         onCancelar:
             onCancelar == null ? null : () => onCancelar!(citas[i]),
+        onReprogramar:
+            onReprogramar == null ? null : () => onReprogramar!(citas[i]),
       ),
     );
   }
