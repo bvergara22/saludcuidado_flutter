@@ -4,6 +4,7 @@ import '../../core/trace/trace_logger.dart';
 import '../../models/cita.dart';
 import '../../models/doctor.dart';
 import '../../models/estado_cita.dart';
+import '../../models/mensaje_chat.dart';
 import '../../models/servicio.dart';
 import '../../models/usuario.dart';
 import '../sample_data.dart';
@@ -254,6 +255,27 @@ class Repositorio {
     });
     _enLinea = true;
     return Cita.desdeJson(j['cita'] as Map<String, dynamic>);
+  }
+
+  // ---------------------------------------------------------- asistente
+
+  /// CONTRATO: chat
+  ///   Requiere : sesión iniciada y un mensaje no vacío
+  ///   Garantiza: devuelve la respuesta del asistente, con las citas o los
+  ///              doctores que haya consultado
+  ///   Falla si : sin sesión -> ApiExcepcion 401
+  ///              sin servidor -> SinConexion (el asistente consulta la
+  ///              base de datos, así que no tiene respaldo local posible)
+  ///
+  /// Trazabilidad backend: `POST /api/chat` -> `ChatController.java`.
+  Future<MensajeChat> chat(String mensaje) async {
+    final j = await api.publicar('/api/chat', {'mensaje': mensaje});
+    _enLinea = true;
+    return MensajeChat.desdeJson(
+      j,
+      leerCita: Cita.desdeJson,
+      leerDoctor: Doctor.desdeJson,
+    );
   }
 
   // --------------------------------------------------------- utilidades

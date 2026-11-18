@@ -232,7 +232,26 @@ class _Encabezado extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
+          // Acceso al asistente: es la función más nueva y la que menos se
+          // descubre sola, así que vive en el encabezado y no enterrada.
+          Material(
+            color: Colors.white.withValues(alpha: 0.18),
+            shape: const CircleBorder(),
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: () {
+                traza.navegacion('HomeScreen', 'Abrir ${AppRoutes.asistente}');
+                Navigator.of(context).pushNamed(AppRoutes.asistente);
+              },
+              child: const Padding(
+                padding: EdgeInsets.all(11),
+                child: Icon(Icons.support_agent_rounded,
+                    color: Colors.white, size: 23),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
           // Avatar ilustrado del paciente, generado desde su semilla.
           Container(
             padding: const EdgeInsets.all(2),

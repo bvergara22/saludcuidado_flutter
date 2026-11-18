@@ -4,6 +4,7 @@ import '../core/trace/trace_logger.dart';
 import '../models/doctor.dart';
 import '../screens/admin_screen.dart';
 import '../screens/ajustes_screen.dart';
+import '../screens/chat_screen.dart';
 import '../screens/doctores_screen.dart';
 import '../screens/login_screen.dart';
 import '../screens/main_shell.dart';
@@ -43,6 +44,7 @@ class AppRoutes {
   static const String trazabilidad = '/trazabilidad';
   static const String admin = AdminScreen.ruta;
   static const String ajustes = AjustesScreen.ruta;
+  static const String asistente = ChatScreen.ruta;
 
   /// Generador central de rutas. Centralizarlo permite registrar la traza
   /// y resolver los argumentos de forma tipada.
@@ -85,6 +87,9 @@ class AppRoutes {
 
       case trazabilidad:
         return _ruta(const TrazabilidadScreen(), settings);
+
+      case asistente:
+        return _ruta(const ChatScreen(), settings);
 
       case ajustes:
         return _ruta(const AjustesScreen(), settings);

@@ -5,6 +5,7 @@ import 'package:saludcuidado/data/preferencias.dart';
 import 'package:saludcuidado/models/cita.dart';
 import 'package:saludcuidado/models/doctor.dart';
 import 'package:saludcuidado/models/estado_cita.dart';
+import 'package:saludcuidado/models/mensaje_chat.dart';
 import 'package:saludcuidado/models/usuario.dart';
 import 'package:saludcuidado/servicios/notificaciones.dart';
 
@@ -224,6 +225,92 @@ void main() {
       expect(ModoTema.desdeTexto('claro'), ModoTema.claro);
       expect(ModoTema.desdeTexto(null), ModoTema.sistema);
       expect(ModoTema.desdeTexto('cualquier cosa'), ModoTema.sistema);
+    });
+  });
+
+  group('Respuestas del asistente', () {
+    MensajeChat leer(Map<String, dynamic> j) => MensajeChat.desdeJson(
+          j,
+          leerCita: Cita.desdeJson,
+          leerDoctor: Doctor.desdeJson,
+        );
+
+    test('Garantiza: texto, intención y sugerencias llegan a la burbuja', () {
+      final m = leer({
+        'respuesta': 'Tu próxima cita es mañana.',
+        'intencion': 'proxima_cita',
+        'sugerencias': ['¿Qué citas tengo?'],
+      });
+
+      expect(m.autor, Autor.asistente);
+      expect(m.texto, 'Tu próxima cita es mañana.');
+      expect(m.intencion, 'proxima_cita');
+      expect(m.sugerencias, ['¿Qué citas tengo?']);
+      expect(m.error, isFalse);
+    });
+
+    test('Garantiza: las citas del asistente se vuelven tarjetas', () {
+      final m = leer({
+        'respuesta': 'Tienes una cita.',
+        'intencion': 'mis_citas',
+        'citas': [
+          {
+            'id': 'cita-9',
+            'fecha': '2026-11-25',
+            'hora': '10:30',
+            'estado': 'PROGRAMADA',
+            'servicio': 'Pediatría',
+            'doctor': doctor.aJson(),
+          }
+        ],
+      });
+
+      expect(m.citas, hasLength(1));
+      expect(m.citas.first.id, 'cita-9');
+      expect(m.citas.first.hora, '10:30');
+      expect(m.citas.first.doctor.nombre, 'Dra. Ana García');
+    });
+
+    test('Falla si: una cita mal formada no tumba el resto de la respuesta',
+        () {
+      // El contrato de Cita exige doctor; aquí falta a propósito.
+      final m = leer({
+        'respuesta': 'Esto sí se tiene que ver.',
+        'intencion': 'mis_citas',
+        'citas': [
+          {'id': 'rota', 'fecha': '2026-11-25', 'hora': '10:30'},
+          {
+            'id': 'buena',
+            'fecha': '2026-11-26',
+            'hora': '11:00',
+            'estado': 'PROGRAMADA',
+            'doctor': doctor.aJson(),
+          },
+        ],
+      });
+
+      expect(m.texto, 'Esto sí se tiene que ver.');
+      expect(m.citas, hasLength(1), reason: 'la rota se descarta, no revienta');
+      expect(m.citas.first.id, 'buena');
+    });
+
+    test('Garantiza: una respuesta sin listas no trae citas ni doctores', () {
+      final m = leer({'respuesta': 'Hola.', 'intencion': 'saludo'});
+      expect(m.citas, isEmpty);
+      expect(m.doctores, isEmpty);
+      expect(m.sugerencias, isEmpty);
+    });
+
+    test('Garantiza: el turno de error se distingue del normal', () {
+      final m = MensajeChat.deError('Sin conexión.');
+      expect(m.error, isTrue);
+      expect(m.autor, Autor.asistente);
+    });
+
+    test('Garantiza: el indicador de escritura no lleva texto', () {
+      final m = MensajeChat.pensando();
+      expect(m.escribiendo, isTrue);
+      expect(m.texto, isEmpty);
     });
   });
 }
