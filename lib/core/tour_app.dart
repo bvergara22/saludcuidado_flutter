@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/preferencias.dart';
+import '../screens/chat_screen.dart';
 import '../widgets/tour_guiado.dart';
 
 /// Recorrido que explica la app una vez iniciada la sesión.
@@ -27,11 +28,12 @@ class TourApp {
           icono: Icons.waving_hand_rounded,
         ),
         PasoTour(
-          titulo: 'Pregunta lo que necesites',
+          titulo: 'Esta es ${Asistente.nombre}',
           cuerpo:
-              'El asistente responde con tus datos reales: cuándo es tu '
-              'próxima cita, qué médicos hay de una especialidad o qué '
-              'horas tiene libres alguien un día concreto.',
+              'Pregúntale con tus palabras y te responde con tus datos '
+              'reales: cuándo es tu próxima cita, qué médicos hay de una '
+              'especialidad o qué horas tiene libres alguien un día '
+              'concreto. Este botón te acompaña en toda la app.',
           icono: Icons.support_agent_rounded,
           ancla: AnclasTour.asistente,
           margen: 8,
@@ -76,7 +78,7 @@ class TourApp {
           titulo: 'Eso es todo',
           cuerpo:
               'Ya puedes reservar tu primera cita. Si algo no te cuadra, '
-              'pregúntale al asistente.',
+              'pregúntale a ${Asistente.nombre}.',
           icono: Icons.check_circle_rounded,
         ),
       ];

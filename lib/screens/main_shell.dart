@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/trace/trace_logger.dart';
 import '../core/tour_app.dart';
 import '../data/app_state.dart';
+import '../widgets/boton_asistente.dart';
 import '../widgets/tour_guiado.dart';
 import 'admin_screen.dart';
 import 'doctores_screen.dart';
@@ -99,6 +100,13 @@ class _MainShellState extends State<MainShell> {
           if (esAdmin) const AdminScreen(mostrarAtras: false),
         ],
       ),
+      // El asistente acompaña a todas las pestañas: es el atajo para
+      // cuando alguien no sabe dónde está lo que busca, así que esconderlo
+      // dentro de una pantalla concreta sería justo lo contrario.
+      // El panel de administración es otra tarea, y ahí estorba.
+      floatingActionButton: indice == MainShell.indiceAdmin
+          ? null
+          : BotonAsistente(key: AnclasTour.asistente),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: indice,
         onTap: _cambiar,

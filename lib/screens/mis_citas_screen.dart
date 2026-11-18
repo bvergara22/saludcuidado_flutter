@@ -213,14 +213,19 @@ class _MisCitasScreenState extends State<MisCitasScreen>
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _irAReservar,
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.add_rounded),
-        label: const Text(
-          'Nueva cita',
-          style: TextStyle(fontWeight: FontWeight.w700),
+      // Se sube para dejar sitio al botón del asistente, que vive en el
+      // shell y está presente en todas las pestañas.
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 66),
+        child: FloatingActionButton.extended(
+          onPressed: _irAReservar,
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+          icon: const Icon(Icons.add_rounded),
+          label: const Text(
+            'Nueva cita',
+            style: TextStyle(fontWeight: FontWeight.w700),
+          ),
         ),
       ),
     );
