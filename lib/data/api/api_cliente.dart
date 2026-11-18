@@ -40,12 +40,16 @@ class SinConexion implements Exception {
 ///      Es la forma de apuntar a la API publicada sin tocar el código.
 ///   2. En web, el parámetro de consulta `?api=` de la propia URL.
 ///      Sirve para probar otro servidor sin recompilar.
-///   3. Valor por defecto según la plataforma, para desarrollo local:
-///      - Flutter Web / escritorio -> localhost
-///      - emulador de Android      -> 10.0.2.2 (alias del host)
-///      - app publicada en web      -> vacío (sin API: modo demostración)
+///   3. Valor por defecto según dónde se esté ejecutando:
+///      - web servida desde un servidor -> **el mismo origen**
+///      - web en localhost (desarrollo) -> localhost:8080
+///      - emulador de Android           -> 10.0.2.2 (alias del host)
+///      - escritorio                    -> localhost:8080
 ///
-/// Para un teléfono físico en la red local hay que poner la IP del PC.
+/// El mismo origen es el caso de la app publicada: el backend sirve también
+/// la web, así que la API está en la misma dirección desde la que se
+/// descargó la página. Eso evita tener que recompilar con una IP o un
+/// dominio distinto para cada entorno, y evita el CORS por completo.
 /// Si [base] queda vacía, la app no intenta ninguna petición y trabaja
 /// directamente con los datos de demostración.
 class ApiConfig {
@@ -82,10 +86,13 @@ class ApiConfig {
       final deUrl = Uri.base.queryParameters['api'];
       if (deUrl != null && deUrl.trim().isNotEmpty) return _limpiar(deUrl);
 
-      // 3. Solo se asume localhost cuando la app se sirve desde el PC.
+      // 3. En desarrollo la web va por su cuenta en otro puerto, así que
+      //    localhost apunta explícitamente al 8080. Servida desde cualquier
+      //    otro sitio, la API es el propio origen de la página: la IP de la
+      //    red local, el balanceador de AWS o lo que sea, sin recompilar.
       final host = Uri.base.host;
       final esLocal = host == 'localhost' || host == '127.0.0.1' || host.isEmpty;
-      return esLocal ? 'http://localhost:$puerto' : '';
+      return esLocal ? 'http://localhost:$puerto' : _limpiar(Uri.base.origin);
     }
 
     if (defaultTargetPlatform == TargetPlatform.android) {
