@@ -284,22 +284,27 @@ class _ChatScreenState extends State<ChatScreen> {
             color: AppColors.textSecondary,
           ),
         ),
-        SizedBox(height: 22),
+        SizedBox(height: 20),
+        // Las sugerencias viven ancladas sobre el campo de escritura, así
+        // que aquí solo se apunta hacia ellas. Un separador de tipo
+        // "Prueba con" prometería que vienen justo debajo y dejaba un
+        // hueco raro en medio de la pantalla.
         Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Expanded(child: Divider(color: AppColors.border)),
+            Icon(Icons.south_rounded, size: 15, color: AppColors.textHint),
+            SizedBox(width: 7),
             Padding(
-              padding: EdgeInsets.symmetric(horizontal: 10),
+              padding: EdgeInsets.symmetric(horizontal: 2),
               child: Text(
-                'Prueba con',
+                'Toca una sugerencia o escríbele',
                 style: TextStyle(
-                  fontSize: 11.5,
+                  fontSize: 12.5,
                   fontWeight: FontWeight.w600,
                   color: AppColors.textHint,
                 ),
               ),
             ),
-            Expanded(child: Divider(color: AppColors.border)),
           ],
         ),
       ],
