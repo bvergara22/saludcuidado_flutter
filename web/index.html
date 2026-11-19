@@ -38,6 +38,26 @@
       height: 100%;
       background: linear-gradient(135deg, #1A5FBF 0%, #14499A 100%);
       overscroll-behavior: none;
+
+      /* Estas tres lineas son las que hacen que la app responda en iOS.
+         Si la pagina puede desplazarse aunque sea unos pocos pixeles
+         -y con height:100% puede, porque la barra de Safari encoge el
+         area visible-, Safari interpreta el micro-movimiento inevitable
+         del dedo como un intento de scroll: se apropia del gesto y
+         emite pointercancel. Flutter cancela entonces la pulsacion, y
+         el resultado es una app que se desliza pero cuyos botones no
+         responden nunca.
+         Flutter se encarga de su propio desplazamiento, asi que el
+         navegador no tiene por que tocar los gestos. */
+      overflow: hidden;
+      position: fixed;
+      touch-action: none;
+      width: 100%;
+    }
+
+    /* Lo mismo para la superficie donde Flutter dibuja. */
+    flutter-view, flt-glass-pane {
+      touch-action: none;
     }
     #cargando {
       position: fixed;
